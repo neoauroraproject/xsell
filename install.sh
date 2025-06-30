@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# WalPanel Installation Script
+# X-UI SELL Installation Script by Hmray
 # Version: 1.0.0
-# Description: Complete installation script for WalPanel X-UI Management System
+# Description: Complete installation script for X-UI SELL Panel Management System
 
 set -e
 
@@ -246,9 +246,9 @@ create_user() {
     fi
 }
 
-# Function to download and install WalPanel
+# Function to download and install X-UI SELL Panel
 install_walpanel() {
-    print_header "Installing WalPanel..."
+    print_header "Installing X-UI SELL Panel by Hmray..."
     
     # Get the current script directory (where the project files are located)
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -308,7 +308,7 @@ install_walpanel() {
     chown -R walpanel:walpanel "$WALPANEL_DIR"
     chmod -R 755 "$WALPANEL_DIR"
     
-    print_success "WalPanel installed successfully"
+    print_success "X-UI SELL Panel by Hmray installed successfully"
 }
 
 # Function to create environment file
@@ -319,13 +319,13 @@ create_env_file() {
     JWT_SECRET=$(openssl rand -base64 32)
     
     cat > "$WALPANEL_DIR/.env" << EOF
-# WalPanel Configuration
+# X-UI SELL Panel Configuration by Hmray
 NODE_ENV=production
 PORT=$API_PORT
 FRONTEND_PORT=$PANEL_PORT
 
 # Database
-DB_PATH=$WALPANEL_DIR/database.sqlite
+DB_PATH=$WALPANEL_DIR/server/database.sqlite
 
 # JWT Configuration
 JWT_SECRET=$JWT_SECRET
@@ -363,7 +363,7 @@ create_systemd_service() {
     
     cat > "/etc/systemd/system/$SERVICE_NAME.service" << EOF
 [Unit]
-Description=WalPanel X-UI Management System
+Description=X-UI SELL Panel Management System by Hmray
 After=network.target
 
 [Service]
@@ -575,15 +575,15 @@ initialize_database() {
 start_services() {
     print_header "Starting Services..."
     
-    # Start WalPanel service
-    print_status "Starting WalPanel service..."
+    # Start X-UI SELL Panel service
+    print_status "Starting X-UI SELL Panel service..."
     systemctl start "$SERVICE_NAME"
     
     # Check service status
     if systemctl is-active --quiet "$SERVICE_NAME"; then
-        print_success "WalPanel service started successfully"
+        print_success "X-UI SELL Panel service started successfully"
     else
-        print_error "Failed to start WalPanel service"
+        print_error "Failed to start X-UI SELL Panel service"
         print_status "Checking service logs..."
         journalctl -u "$SERVICE_NAME" --no-pager -n 20
         exit 1
@@ -600,7 +600,7 @@ display_final_info() {
     print_header "Installation Complete!"
     
     echo
-    print_success "WalPanel has been installed successfully!"
+    print_success "X-UI SELL Panel by Hmray has been installed successfully!"
     echo
     echo "Access Information:"
     echo "=================="
@@ -635,25 +635,28 @@ display_final_info() {
     fi
     
     print_warning "Please save your admin credentials in a secure location!"
-    print_status "You can now access WalPanel at your domain."
+    print_status "You can now access X-UI SELL Panel at your domain."
+    echo
+    print_header "Copyright © 2025 Design and developed by Hmray"
 }
 
 # Function to show menu
 show_menu() {
     clear
     print_header "╔══════════════════════════════════════════════════════════════╗"
-    print_header "║                    WalPanel Installer                       ║"
-    print_header "║              X-UI Management Panel v1.0.0                   ║"
+    print_header "║                    X-UI SELL Installer                      ║"
+    print_header "║              Professional X-UI Management v1.0.0            ║"
+    print_header "║                  Design by Hmray                            ║"
     print_header "╚══════════════════════════════════════════════════════════════╝"
     echo
     echo "Please select an option:"
     echo
-    echo "1) Install WalPanel (Full Installation)"
+    echo "1) Install X-UI SELL Panel (Full Installation)"
     echo "2) Install Dependencies Only"
-    echo "3) Update WalPanel"
-    echo "4) Uninstall WalPanel"
-    echo "5) Backup WalPanel"
-    echo "6) Restore WalPanel"
+    echo "3) Update X-UI SELL Panel"
+    echo "4) Uninstall X-UI SELL Panel"
+    echo "5) Backup X-UI SELL Panel"
+    echo "6) Restore X-UI SELL Panel"
     echo "7) View Service Status"
     echo "8) View Logs"
     echo "9) Exit"
@@ -669,17 +672,17 @@ install_dependencies_only() {
     print_success "Dependencies installed successfully!"
 }
 
-# Function to update WalPanel
+# Function to update X-UI SELL Panel
 update_walpanel() {
-    print_header "Updating WalPanel..."
+    print_header "Updating X-UI SELL Panel..."
     
     if [[ ! -d "$WALPANEL_DIR" ]]; then
-        print_error "WalPanel is not installed"
+        print_error "X-UI SELL Panel is not installed"
         return 1
     fi
     
     # Stop service
-    print_status "Stopping WalPanel service..."
+    print_status "Stopping X-UI SELL Panel service..."
     systemctl stop "$SERVICE_NAME"
     
     # Backup current installation
@@ -687,7 +690,7 @@ update_walpanel() {
     cp -r "$WALPANEL_DIR" "$WALPANEL_DIR.backup.$(date +%Y%m%d_%H%M%S)"
     
     # Update code (this would download new version in real scenario)
-    print_status "Updating WalPanel..."
+    print_status "Updating X-UI SELL Panel..."
     cd "$WALPANEL_DIR/server"
     npm update
     
@@ -696,17 +699,17 @@ update_walpanel() {
     npm run build
     
     # Restart service
-    print_status "Starting WalPanel service..."
+    print_status "Starting X-UI SELL Panel service..."
     systemctl start "$SERVICE_NAME"
     
-    print_success "WalPanel updated successfully!"
+    print_success "X-UI SELL Panel updated successfully!"
 }
 
-# Function to uninstall WalPanel
+# Function to uninstall X-UI SELL Panel
 uninstall_walpanel() {
-    print_header "Uninstalling WalPanel..."
+    print_header "Uninstalling X-UI SELL Panel..."
     
-    read -p "Are you sure you want to uninstall WalPanel? This will remove all data! (y/N): " confirm
+    read -p "Are you sure you want to uninstall X-UI SELL Panel? This will remove all data! (y/N): " confirm
     if [[ "$confirm" != "y" ]]; then
         print_status "Uninstall cancelled"
         return 0
@@ -736,15 +739,15 @@ uninstall_walpanel() {
         certbot delete --cert-name "$DOMAIN" 2>/dev/null || true
     fi
     
-    print_success "WalPanel uninstalled successfully!"
+    print_success "X-UI SELL Panel uninstalled successfully!"
 }
 
-# Function to backup WalPanel
+# Function to backup X-UI SELL Panel
 backup_walpanel() {
-    print_header "Backing up WalPanel..."
+    print_header "Backing up X-UI SELL Panel..."
     
     if [[ ! -d "$WALPANEL_DIR" ]]; then
-        print_error "WalPanel is not installed"
+        print_error "X-UI SELL Panel is not installed"
         return 1
     fi
     
@@ -759,9 +762,9 @@ backup_walpanel() {
     print_success "Backup created: $BACKUP_FILE"
 }
 
-# Function to restore WalPanel
+# Function to restore X-UI SELL Panel
 restore_walpanel() {
-    print_header "Restoring WalPanel..."
+    print_header "Restoring X-UI SELL Panel..."
     
     BACKUP_DIR="/opt/walpanel-backups"
     
@@ -793,17 +796,17 @@ restore_walpanel() {
     # Start service
     systemctl start "$SERVICE_NAME"
     
-    print_success "WalPanel restored successfully!"
+    print_success "X-UI SELL Panel restored successfully!"
 }
 
 # Function to view service status
 view_service_status() {
-    print_header "WalPanel Service Status"
+    print_header "X-UI SELL Panel Service Status"
     
     if systemctl is-active --quiet "$SERVICE_NAME"; then
-        print_success "WalPanel service is running"
+        print_success "X-UI SELL Panel service is running"
     else
-        print_error "WalPanel service is not running"
+        print_error "X-UI SELL Panel service is not running"
     fi
     
     echo
@@ -812,7 +815,7 @@ view_service_status() {
 
 # Function to view logs
 view_logs() {
-    print_header "WalPanel Logs"
+    print_header "X-UI SELL Panel Logs"
     echo "Press Ctrl+C to exit log view"
     echo
     journalctl -u "$SERVICE_NAME" -f
@@ -820,7 +823,7 @@ view_logs() {
 
 # Main installation function
 main_install() {
-    print_header "Starting WalPanel Installation..."
+    print_header "Starting X-UI SELL Panel Installation by Hmray..."
     
     # Create log file
     touch "$LOG_FILE"
@@ -887,6 +890,8 @@ main() {
                 ;;
             9)
                 print_status "Goodbye!"
+                echo
+                print_header "Copyright © 2025 Design and developed by Hmray"
                 exit 0
                 ;;
             *)
