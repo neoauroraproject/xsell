@@ -11,7 +11,7 @@ A professional web-based management panel for X-UI proxy servers with advanced u
 
 **One-line installation command:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xsell/x-ui-sell-panel/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/xsell/main/install.sh | sudo bash
 ```
 
 ## ✨ Features
@@ -69,13 +69,13 @@ curl -fsSL https://raw.githubusercontent.com/xsell/x-ui-sell-panel/main/install.
 
 ### Method 1: One-Line Installation (Recommended)
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xsell/x-ui-sell-panel/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/xsell/main/install.sh | sudo bash
 ```
 
 ### Method 2: Manual Installation
 ```bash
 # Download the installer
-wget https://raw.githubusercontent.com/xsell/x-ui-sell-panel/main/install.sh
+wget https://raw.githubusercontent.com/xsell/main/install.sh
 
 # Make it executable
 chmod +x install.sh
@@ -87,7 +87,7 @@ sudo ./install.sh
 ### Method 3: Git Clone Installation
 ```bash
 # Clone the repository
-git clone https://github.com/xsell/x-ui-sell-panel.git
+git clone https://github.com/xsell.git
 cd x-ui-sell-panel
 
 # Run the installer
@@ -194,8 +194,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Getting Help
 - **📖 Documentation**: Comprehensive guides and tutorials
-- **🐛 Issues**: [GitHub Issues](https://github.com/xsell/x-ui-sell-panel/issues) for bug reports
-- **💡 Feature Requests**: [GitHub Discussions](https://github.com/xsell/x-ui-sell-panel/discussions)
+- **🐛 Issues**: [GitHub Issues](https://github.com/xsell/issues) for bug reports
+- **💡 Feature Requests**: [GitHub Discussions](https://github.com/xsell/discussions)
 - **💬 Community**: Join our community for support and discussions
 
 ### Professional Support
@@ -207,8 +207,8 @@ For enterprise support, custom development, or consulting services, please conta
 
 **X-UI SELL Panel** - Professional X-UI Management Made Simple
 
-[![GitHub stars](https://img.shields.io/github/stars/xsell/x-ui-sell-panel?style=social)](https://github.com/xsell/x-ui-sell-panel/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/xsell/x-ui-sell-panel?style=social)](https://github.com/xsell/x-ui-sell-panel/network/members)
+[![GitHub stars](https://img.shields.io/github/stars/xsell?style=social)](https://github.com/xsell/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/xsell?style=social)](https://github.com/xsell/network/members)
 
 **Copyright © 2025 Design and developed by Hmray**
 
