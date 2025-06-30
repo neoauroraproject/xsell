@@ -11,7 +11,7 @@ A professional web-based management panel for X-UI proxy servers with advanced u
 
 **One-line installation command:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xsell/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/neoauroraproject/xsell/main/install.sh | sudo bash
 ```
 
 ## ✨ Features
@@ -69,13 +69,13 @@ curl -fsSL https://raw.githubusercontent.com/xsell/main/install.sh | sudo bash
 
 ### Method 1: One-Line Installation (Recommended)
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xsell/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/neoauroraproject/xsell/main/install.sh | sudo bash
 ```
 
 ### Method 2: Manual Installation
 ```bash
 # Download the installer
-wget https://raw.githubusercontent.com/xsell/main/install.sh
+wget https://raw.githubusercontent.com/neoauroraproject/xsell/main/install.sh
 
 # Make it executable
 chmod +x install.sh
@@ -87,8 +87,8 @@ sudo ./install.sh
 ### Method 3: Git Clone Installation
 ```bash
 # Clone the repository
-git clone https://github.com/xsell.git
-cd x-ui-sell-panel
+git clone https://github.com/neoauroraproject/xsell.git
+cd xsell
 
 # Run the installer
 sudo ./install.sh
@@ -182,11 +182,362 @@ sudo journalctl -u walpanel -f
 └── 📁 /etc/letsencrypt/live/your-domain/      # SSL certificates
 ```
 
----
+## 🔌 API Documentation
 
-## 📄 Copyright
+X-UI SELL Panel provides a comprehensive REST API:
 
-**Copyright © 2025 Design and developed by Hmray**
+### Authentication Endpoints
+```http
+POST   /api/auth/login           # Admin login
+POST   /api/auth/logout          # Admin logout
+GET    /api/auth/me              # Get current user
+POST   /api/auth/change-password # Change password
+```
+
+### Panel Management
+```http
+GET    /api/panels               # List all panels
+POST   /api/panels               # Create new panel
+PUT    /api/panels/:id           # Update panel
+DELETE /api/panels/:id           # Delete panel
+```
+
+### User Management
+```http
+GET    /api/users                # List all users
+POST   /api/users                # Create new user
+PUT    /api/users/:id            # Update user
+DELETE /api/users/:id            # Delete user
+```
+
+### Admin Management
+```http
+GET    /api/admins               # List all admins (super admin only)
+POST   /api/admins               # Create new admin (super admin only)
+PUT    /api/admins/:id           # Update admin
+DELETE /api/admins/:id           # Delete admin (super admin only)
+```
+
+### X-UI Integration
+```http
+POST   /api/xui/test-connection  # Test X-UI panel connection
+GET    /api/xui/inbounds/:panelId # Get panel inbounds
+GET    /api/xui/stats/:panelId   # Get panel statistics
+POST   /api/xui/clients/:panelId # Create X-UI client
+PUT    /api/xui/clients/:panelId/:clientId # Update X-UI client
+DELETE /api/xui/clients/:panelId/:clientId # Delete X-UI client
+```
+
+### Settings Management
+```http
+GET    /api/settings             # Get all settings
+GET    /api/settings/:key        # Get specific setting
+PUT    /api/settings/:key        # Update setting
+POST   /api/settings             # Create new setting
+DELETE /api/settings/:key        # Delete setting
+```
+
+## 🛠️ Advanced Configuration
+
+### Environment Variables
+Edit `/opt/walpanel/.env` to customize:
+
+```bash
+# Server Configuration
+NODE_ENV=production
+PORT=3001
+FRONTEND_PORT=3000
+
+# Database
+DB_PATH=/opt/walpanel/server/database.sqlite
+
+# JWT Configuration
+JWT_SECRET=your-secret-key
+JWT_EXPIRES_IN=24h
+
+# Domain Configuration
+DOMAIN=your-domain.com
+PANEL_URL=https://your-domain.com
+```
+
+### Nginx Configuration
+Custom Nginx settings in `/etc/nginx/sites-available/walpanel`:
+
+```nginx
+# Custom rate limiting
+limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+
+server {
+    # ... existing configuration ...
+    
+    # API rate limiting
+    location /api/ {
+        limit_req zone=api burst=20 nodelay;
+        # ... existing proxy settings ...
+    }
+}
+```
+
+## 💾 Backup & Recovery
+
+### Automatic Backups
+```bash
+# Create backup
+sudo ./install.sh
+# Select option 5
+
+# Restore backup
+sudo ./install.sh
+# Select option 6
+```
+
+### Manual Database Backup
+```bash
+# Backup database
+sudo cp /opt/walpanel/server/database.sqlite /opt/walpanel/server/database.backup.$(date +%Y%m%d_%H%M%S).sqlite
+
+# Restore database
+sudo systemctl stop walpanel
+sudo cp /opt/walpanel/server/database.backup.YYYYMMDD_HHMMSS.sqlite /opt/walpanel/server/database.sqlite
+sudo systemctl start walpanel
+```
+
+### Configuration Backup
+```bash
+# Backup configuration
+sudo tar -czf walpanel-config-$(date +%Y%m%d_%H%M%S).tar.gz -C /opt/walpanel .env
+
+# Backup entire installation
+sudo tar -czf walpanel-full-$(date +%Y%m%d_%H%M%S).tar.gz -C /opt walpanel
+```
+
+## 🔄 Updating
+
+### Automatic Update
+```bash
+sudo ./install.sh
+# Select option 3 for update
+```
+
+### Manual Update
+```bash
+cd /opt/walpanel
+sudo systemctl stop walpanel
+
+# Backup current version
+sudo cp -r /opt/walpanel /opt/walpanel.backup.$(date +%Y%m%d_%H%M%S)
+
+# Update dependencies
+cd server && sudo npm update
+cd .. && sudo npm update && sudo npm run build
+
+sudo systemctl start walpanel
+```
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+#### 1. Service Won't Start
+```bash
+# Check service status
+sudo systemctl status walpanel
+
+# View detailed logs
+sudo journalctl -u walpanel -n 50
+
+# Check file permissions
+sudo chown -R walpanel:walpanel /opt/walpanel
+sudo systemctl restart walpanel
+```
+
+#### 2. Database Connection Issues
+```bash
+# Check database file
+ls -la /opt/walpanel/server/database.sqlite
+
+# Reset database permissions
+sudo chown walpanel:walpanel /opt/walpanel/server/database.sqlite
+sudo chmod 644 /opt/walpanel/server/database.sqlite
+```
+
+#### 3. Nginx Configuration Errors
+```bash
+# Test Nginx configuration
+sudo nginx -t
+
+# Reload Nginx
+sudo systemctl reload nginx
+
+# Check Nginx logs
+sudo tail -f /var/log/nginx/walpanel_error.log
+```
+
+#### 4. SSL Certificate Issues
+```bash
+# Test certificate renewal
+sudo certbot renew --dry-run
+
+# Force certificate renewal
+sudo certbot renew --force-renewal
+
+# Check certificate status
+sudo certbot certificates
+```
+
+#### 5. X-UI Connection Problems
+```bash
+# Test X-UI connection manually
+curl -X POST http://your-xui-panel/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"your-username","password":"your-password"}'
+
+# Check X-UI panel accessibility
+curl -I http://your-xui-panel
+```
+
+### Log Files
+```bash
+# Application logs
+sudo journalctl -u walpanel -f
+
+# Nginx access logs
+sudo tail -f /var/log/nginx/walpanel_access.log
+
+# Nginx error logs
+sudo tail -f /var/log/nginx/walpanel_error.log
+
+# Installation log
+sudo tail -f /var/log/walpanel-install.log
+```
+
+### Performance Optimization
+
+#### Database Optimization
+```bash
+# Vacuum database
+sudo sqlite3 /opt/walpanel/server/database.sqlite "VACUUM;"
+
+# Analyze database
+sudo sqlite3 /opt/walpanel/server/database.sqlite "ANALYZE;"
+```
+
+#### Memory Optimization
+```bash
+# Check memory usage
+free -h
+ps aux | grep node
+
+# Restart service to free memory
+sudo systemctl restart walpanel
+```
+
+## 🗑️ Uninstalling
+
+### Complete Removal
+```bash
+sudo ./install.sh
+# Select option 4 for uninstall
+```
+
+### Manual Removal
+```bash
+# Stop and disable service
+sudo systemctl stop walpanel
+sudo systemctl disable walpanel
+sudo rm /etc/systemd/system/walpanel.service
+sudo systemctl daemon-reload
+
+# Remove Nginx configuration
+sudo rm /etc/nginx/sites-available/walpanel
+sudo rm /etc/nginx/sites-enabled/walpanel
+sudo systemctl restart nginx
+
+# Remove installation directory
+sudo rm -rf /opt/walpanel
+
+# Remove user
+sudo userdel walpanel
+
+# Remove SSL certificate (optional)
+sudo certbot delete --cert-name your-domain.com
+```
+
+## 🔒 Security Best Practices
+
+### Server Security
+- Keep system packages updated
+- Use strong passwords for admin accounts
+- Enable firewall with minimal required ports
+- Regular security audits and log monitoring
+- Use SSL/TLS encryption for all connections
+
+### Application Security
+- Change default admin credentials immediately
+- Use strong JWT secrets
+- Regular database backups
+- Monitor access logs for suspicious activity
+- Keep X-UI SELL Panel updated to latest version
+
+### X-UI Panel Security
+- Use strong credentials for X-UI panels
+- Limit X-UI panel access to X-UI SELL Panel server IP
+- Regular X-UI panel updates
+- Monitor X-UI panel logs
+
+## 📊 Monitoring & Maintenance
+
+### Health Checks
+```bash
+# Check service health
+curl http://localhost:3001/api/health
+
+# Check database connectivity
+sudo sqlite3 /opt/walpanel/server/database.sqlite ".tables"
+
+# Check disk space
+df -h /opt/walpanel
+```
+
+### Regular Maintenance
+```bash
+# Weekly tasks
+sudo systemctl restart walpanel  # Restart service
+sudo sqlite3 /opt/walpanel/server/database.sqlite "VACUUM;"  # Optimize database
+
+# Monthly tasks
+sudo ./install.sh  # Check for updates (option 3)
+sudo certbot renew  # Renew SSL certificates
+```
+
+## 🤝 Contributing
+
+We welcome contributions! Here's how you can help:
+
+1. **Fork the repository**
+2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
+3. **Commit your changes**: `git commit -m 'Add amazing feature'`
+4. **Push to the branch**: `git push origin feature/amazing-feature`
+5. **Open a Pull Request**
+
+### Development Setup
+```bash
+# Clone repository
+git clone https://github.com/neoauroraproject/xsell.git
+cd xsell
+
+# Install backend dependencies
+cd server && npm install
+
+# Install frontend dependencies
+cd .. && npm install
+
+# Start development servers
+npm run server:dev  # Backend
+npm run dev         # Frontend
+```
+
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
@@ -194,12 +545,25 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Getting Help
 - **📖 Documentation**: Comprehensive guides and tutorials
-- **🐛 Issues**: [GitHub Issues](https://github.com/xsell/issues) for bug reports
-- **💡 Feature Requests**: [GitHub Discussions](https://github.com/xsell/discussions)
+- **🐛 Issues**: [GitHub Issues](https://github.com/neoauroraproject/xsell/issues) for bug reports
+- **💡 Feature Requests**: [GitHub Discussions](https://github.com/neoauroraproject/xsell/discussions)
 - **💬 Community**: Join our community for support and discussions
 
 ### Professional Support
 For enterprise support, custom development, or consulting services, please contact us.
+
+## 🙏 Acknowledgments
+
+- **X-UI Project**: For the excellent X-UI panel
+- **React Team**: For the amazing React framework
+- **Node.js Community**: For the robust backend platform
+- **Contributors**: All the amazing people who contribute to this project
+
+---
+
+## 📄 Copyright
+
+**Copyright © 2025 Design and developed by Hmray**
 
 ---
 
@@ -207,8 +571,8 @@ For enterprise support, custom development, or consulting services, please conta
 
 **X-UI SELL Panel** - Professional X-UI Management Made Simple
 
-[![GitHub stars](https://img.shields.io/github/stars/xsell?style=social)](https://github.com/xsell/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/xsell?style=social)](https://github.com/xsell/network/members)
+[![GitHub stars](https://img.shields.io/github/stars/neoauroraproject/xsell?style=social)](https://github.com/neoauroraproject/xsell/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/neoauroraproject/xsell?style=social)](https://github.com/neoauroraproject/xsell/network/members)
 
 **Copyright © 2025 Design and developed by Hmray**
 
