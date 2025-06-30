@@ -661,7 +661,6 @@ show_menu() {
     echo "8) View Logs"
     echo "9) Exit"
     echo
-    read -p "Enter your choice [1-9]: " choice
 }
 
 # Function to install dependencies only
@@ -852,6 +851,7 @@ main_install() {
 main() {
     while true; do
         show_menu
+        read -p "Enter your choice [1-9]: " choice
         case $choice in
             1)
                 main_install
