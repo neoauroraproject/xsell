@@ -201,17 +201,6 @@ get_user_input() {
         done
     fi
     
-    # X-UI Panel Configuration (Optional)
-    read -p "Do you want to configure X-UI panel connection now? (y/n) [default: n]: " CONFIGURE_XUI
-    CONFIGURE_XUI=${CONFIGURE_XUI:-n}
-    
-    if [[ "$CONFIGURE_XUI" == "y" ]]; then
-        read -p "Enter X-UI panel URL: " XUI_URL
-        read -p "Enter X-UI panel username: " XUI_USERNAME
-        read -s -p "Enter X-UI panel password: " XUI_PASSWORD
-        echo
-    fi
-    
     # Summary
     print_header "Configuration Summary"
     echo "Domain: $DOMAIN"
@@ -221,10 +210,6 @@ get_user_input() {
     echo "Install SSL: $INSTALL_SSL"
     if [[ "$INSTALL_SSL" == "y" ]]; then
         echo "SSL Email: $SSL_EMAIL"
-    fi
-    if [[ "$CONFIGURE_XUI" == "y" ]]; then
-        echo "X-UI URL: $XUI_URL"
-        echo "X-UI Username: $XUI_USERNAME"
     fi
     
     read -p "Continue with installation? (y/n): " CONFIRM
@@ -338,17 +323,7 @@ ADMIN_PASSWORD=$ADMIN_PASSWORD
 # Domain Configuration
 DOMAIN=$DOMAIN
 PANEL_URL=https://$DOMAIN
-
-# X-UI Configuration (if provided)
 EOF
-    
-    if [[ "$CONFIGURE_XUI" == "y" ]]; then
-        cat >> "$WALPANEL_DIR/.env" << EOF
-XUI_URL=$XUI_URL
-XUI_USERNAME=$XUI_USERNAME
-XUI_PASSWORD=$XUI_PASSWORD
-EOF
-    fi
     
     # Set permissions
     chown walpanel:walpanel "$WALPANEL_DIR/.env"

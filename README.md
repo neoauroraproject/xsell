@@ -11,7 +11,7 @@ A professional web-based management panel for X-UI proxy servers with advanced u
 
 **One-line installation command:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/neoauroraproject/xsell/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/neoauroraproject/xsell/main/install.sh -o install.sh && chmod +x install.sh && sudo ./install.sh
 ```
 
 ## ✨ Features
@@ -69,7 +69,7 @@ curl -fsSL https://raw.githubusercontent.com/neoauroraproject/xsell/main/install
 
 ### Method 1: One-Line Installation (Recommended)
 ```bash
-curl -fsSL https://raw.githubusercontent.com/neoauroraproject/xsell/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/neoauroraproject/xsell/main/install.sh -o install.sh && chmod +x install.sh && sudo ./install.sh
 ```
 
 ### Method 2: Manual Installation
@@ -124,11 +124,6 @@ During installation, you'll configure:
 ### SSL Certificate
 - **Auto SSL**: Automatic Let's Encrypt certificate
 - **Email**: Email for SSL certificate notifications
-
-### X-UI Panel (Optional)
-- **Panel URL**: X-UI panel URL
-- **Username**: X-UI panel username
-- **Password**: X-UI panel password
 
 ## 🔑 Default Access
 
