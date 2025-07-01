@@ -11,7 +11,7 @@ router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    console.log('🔐 Login attempt:', { username, passwordProvided: !!password });
+    console.log('🔐 Login attempt:', { username, passwordProvided: !!password, timestamp: new Date().toISOString() });
 
     if (!username || !password) {
       console.log('❌ Missing username or password');
@@ -27,7 +27,12 @@ router.post('/login', async (req, res) => {
       [username, username]
     );
 
-    console.log('👤 User found:', user ? { id: user.id, username: user.username, role: user.role } : 'No user found');
+    console.log('👤 User lookup result:', user ? { 
+      id: user.id, 
+      username: user.username, 
+      role: user.role,
+      hasPassword: !!user.password 
+    } : 'No user found');
 
     if (!user) {
       console.log('❌ User not found');
@@ -39,7 +44,7 @@ router.post('/login', async (req, res) => {
 
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
-    console.log('🔑 Password valid:', isValidPassword);
+    console.log('🔑 Password validation:', isValidPassword);
 
     if (!isValidPassword) {
       console.log('❌ Invalid password');
@@ -50,26 +55,33 @@ router.post('/login', async (req, res) => {
     }
 
     // Generate JWT token
+    const tokenPayload = { 
+      id: user.id, 
+      username: user.username, 
+      role: user.role 
+    };
+    
     const token = jwt.sign(
-      { 
-        id: user.id, 
-        username: user.username, 
-        role: user.role 
-      },
+      tokenPayload,
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
 
     console.log('✅ Login successful for user:', user.username);
+    console.log('🎫 Token generated:', { payload: tokenPayload, expiresIn: '24h' });
 
-    // Set cookie
-    res.cookie('token', token, {
+    // Set cookie with proper options
+    const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    });
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      path: '/'
+    };
 
+    res.cookie('token', token, cookieOptions);
+
+    // Send response
     res.json({
       success: true,
       message: 'Login successful',
@@ -87,14 +99,23 @@ router.post('/login', async (req, res) => {
     console.error('❌ Login error:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
 
 // Logout
 router.post('/logout', (req, res) => {
-  res.clearCookie('token');
+  console.log('🚪 Logout request');
+  
+  res.clearCookie('token', {
+    path: '/',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'
+  });
+  
   res.json({
     success: true,
     message: 'Logout successful'
@@ -103,6 +124,7 @@ router.post('/logout', (req, res) => {
 
 // Get current user
 router.get('/me', authenticateToken, (req, res) => {
+  console.log('👤 Get current user:', req.user);
   res.json({
     success: true,
     data: {
@@ -146,6 +168,8 @@ router.post('/change-password', authenticateToken, async (req, res) => {
       'UPDATE admins SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
       [hashedNewPassword, req.user.id]
     );
+
+    console.log('🔑 Password changed for user:', req.user.username);
 
     res.json({
       success: true,

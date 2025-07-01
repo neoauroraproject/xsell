@@ -1,0 +1,23 @@
+[Unit]
+Description=X-UI SELL Panel Management System by Hmray
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/project/server
+ExecStart=/usr/bin/node index.js
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+Environment=PORT=3001
+Environment=JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/home/project
+
+[Install]
+WantedBy=multi-user.target

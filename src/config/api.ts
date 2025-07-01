@@ -24,7 +24,7 @@ class ApiClient {
         'Content-Type': 'application/json',
         ...options.headers,
       },
-      credentials: 'include',
+      credentials: 'include', // Important for cookies
       ...options,
     };
 
@@ -66,18 +66,24 @@ class ApiClient {
   // Auth endpoints
   async login(username: string, password: string) {
     console.log('🔐 Attempting login with:', { username });
-    const response = await this.request('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ username, password }),
-    });
     
-    // Store token if login successful
-    if (response.success && response.data && response.data.token) {
-      console.log('💾 Storing auth token');
-      localStorage.setItem('auth_token', response.data.token);
+    try {
+      const response = await this.request('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+      });
+      
+      // Store token if login successful
+      if (response.success && response.data && response.data.token) {
+        console.log('💾 Storing auth token');
+        localStorage.setItem('auth_token', response.data.token);
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('❌ Login request failed:', error);
+      throw error;
     }
-    
-    return response;
   }
 
   async logout() {
