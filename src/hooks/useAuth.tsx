@@ -16,6 +16,7 @@ interface AuthContextType {
   logout: () => void;
   loading: boolean;
   isSuperAdmin: boolean;
+  error: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,6 +33,7 @@ const _useAuthStateLogic = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuthStatus();
@@ -39,7 +41,14 @@ const _useAuthStateLogic = () => {
 
   const checkAuthStatus = async () => {
     console.log('🔍 Checking authentication status...');
+    setError(null);
+    
     try {
+      // First check if server is reachable
+      console.log('🏥 Checking server health...');
+      await apiClient.healthCheck();
+      console.log('✅ Server is reachable');
+
       const token = localStorage.getItem('auth_token');
       console.log('🎫 Token found:', !!token);
       
@@ -63,8 +72,9 @@ const _useAuthStateLogic = () => {
         setIsAuthenticated(false);
         setUser(null);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Auth check failed:', error);
+      setError(error.message);
       localStorage.removeItem('auth_token');
       setIsAuthenticated(false);
       setUser(null);
@@ -76,7 +86,14 @@ const _useAuthStateLogic = () => {
   const login = async (username: string, password: string): Promise<boolean> => {
     console.log('🔐 Starting login process...');
     setLoading(true);
+    setError(null);
+    
     try {
+      // First check if server is reachable
+      console.log('🏥 Checking server health before login...');
+      await apiClient.healthCheck();
+      console.log('✅ Server is reachable, proceeding with login');
+
       const response = await apiClient.login(username, password);
       console.log('📡 Login response:', response);
       
@@ -84,13 +101,16 @@ const _useAuthStateLogic = () => {
         console.log('✅ Login successful, setting user state');
         setIsAuthenticated(true);
         setUser(response.data.user);
+        setError(null);
         return true;
       } else {
         console.log('❌ Login failed - invalid response format');
+        setError('Login failed - invalid response');
         return false;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Login failed:', error);
+      setError(error.message || 'Login failed');
       return false;
     } finally {
       setLoading(false);
@@ -107,6 +127,7 @@ const _useAuthStateLogic = () => {
       localStorage.removeItem('auth_token');
       setIsAuthenticated(false);
       setUser(null);
+      setError(null);
     }
   };
 
@@ -119,7 +140,8 @@ const _useAuthStateLogic = () => {
     login, 
     logout, 
     loading, 
-    isSuperAdmin 
+    isSuperAdmin,
+    error
   };
 };
 

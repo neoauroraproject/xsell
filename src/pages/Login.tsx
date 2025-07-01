@@ -1,23 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Shield, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Shield, Lock, User, Eye, EyeOff, AlertCircle, Wifi } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const Login: React.FC = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('admin');
+  const [password, setPassword] = useState('admin123');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, error } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('📝 Form submitted with:', { username, password: '***' });
     
-    setError('');
     setLoading(true);
 
     try {
@@ -30,11 +28,9 @@ export const Login: React.FC = () => {
         navigate('/');
       } else {
         console.log('❌ Login failed');
-        setError('Invalid username or password');
       }
     } catch (err: any) {
       console.error('❌ Login error:', err);
-      setError(err.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -62,15 +58,26 @@ export const Login: React.FC = () => {
             <p className="mt-2 text-gray-600 dark:text-gray-400">Professional X-UI Management System</p>
           </div>
 
+          {/* Connection Status */}
+          <div className="mb-6">
+            <div className="flex items-center justify-center space-x-2 text-sm">
+              <Wifi className="h-4 w-4 text-green-500" />
+              <span className="text-gray-600 dark:text-gray-400">
+                Server: {window.location.protocol}//{window.location.host}
+              </span>
+            </div>
+          </div>
+
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg"
+                className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg flex items-center space-x-2"
               >
-                {error}
+                <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                <span className="text-sm">{error}</span>
               </motion.div>
             )}
 
@@ -114,6 +121,15 @@ export const Login: React.FC = () => {
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
+              </div>
+            </div>
+
+            {/* Demo Credentials Info */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <div className="text-sm text-blue-800 dark:text-blue-200">
+                <p className="font-medium mb-1">Demo Credentials:</p>
+                <p>Username: <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">admin</code></p>
+                <p>Password: <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">admin123</code></p>
               </div>
             </div>
 

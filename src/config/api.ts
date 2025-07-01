@@ -38,12 +38,24 @@ class ApiClient {
     }
 
     try {
+      console.log('📡 Making request with config:', {
+        url,
+        method: config.method,
+        headers: config.headers,
+        hasBody: !!config.body
+      });
+
       const response = await fetch(url, config);
       
       console.log(`📡 API Response: ${response.status} ${response.statusText}`);
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
+        }
         console.error('❌ API Error:', errorData);
         throw new Error(errorData.error || errorData.message || `HTTP error! status: ${response.status}`);
       }
@@ -59,6 +71,12 @@ class ApiClient {
       return data;
     } catch (error) {
       console.error(`❌ API request failed: ${endpoint}`, error);
+      
+      // Check if it's a network error
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Network error: Unable to connect to server. Please check if the server is running.');
+      }
+      
       throw error;
     }
   }
@@ -241,6 +259,11 @@ class ApiClient {
     return this.request(`/settings/${key}`, {
       method: 'DELETE',
     });
+  }
+
+  // Health check
+  async healthCheck() {
+    return this.request('/health');
   }
 }
 
