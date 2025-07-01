@@ -90,7 +90,7 @@ install_dependencies() {
         
         # Install required packages
         print_status "Installing required packages..."
-        apt-get install -y curl wget git nginx certbot python3-certbot-nginx ufw sqlite3 unzip
+        apt-get install -y curl wget git nginx certbot python3-certbot-nginx ufw sqlite3 unzip openssl
         
         # Install Node.js 18.x
         if ! command_exists node; then
@@ -111,7 +111,7 @@ install_dependencies() {
         
         # Install required packages
         print_status "Installing required packages..."
-        yum install -y curl wget git nginx certbot python3-certbot-nginx firewalld sqlite unzip
+        yum install -y curl wget git nginx certbot python3-certbot-nginx firewalld sqlite unzip openssl
         
         # Install Node.js 18.x
         if ! command_exists node; then
@@ -405,6 +405,23 @@ EOF
     print_success "Systemd service created and enabled"
 }
 
+# Function to create self-signed certificate
+create_self_signed_cert() {
+    print_status "Creating self-signed SSL certificate..."
+    
+    # Create SSL directory
+    mkdir -p /etc/ssl/private
+    mkdir -p /etc/ssl/certs
+    
+    # Generate self-signed certificate
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+        -keyout /etc/ssl/private/walpanel-selfsigned.key \
+        -out /etc/ssl/certs/walpanel-selfsigned.crt \
+        -subj "/C=US/ST=State/L=City/O=Organization/OU=OrgUnit/CN=$DOMAIN"
+    
+    print_success "Self-signed certificate created"
+}
+
 # Function to configure Nginx
 configure_nginx() {
     print_header "Configuring Nginx..."
@@ -414,6 +431,9 @@ configure_nginx() {
         print_status "Backing up default Nginx configuration..."
         mv /etc/nginx/sites-enabled/default /etc/nginx/sites-enabled/default.backup
     fi
+    
+    # Create self-signed certificate for initial setup
+    create_self_signed_cert
     
     # Create Nginx configuration
     cat > "$NGINX_CONF" << EOF
@@ -429,9 +449,16 @@ server {
     listen 443 ssl http2;
     server_name $DOMAIN;
     
-    # SSL Configuration (will be updated by certbot)
-    ssl_certificate /etc/ssl/certs/ssl-cert-snakeoil.pem;
-    ssl_certificate_key /etc/ssl/private/ssl-cert-snakeoil.key;
+    # SSL Configuration (self-signed initially)
+    ssl_certificate /etc/ssl/certs/walpanel-selfsigned.crt;
+    ssl_certificate_key /etc/ssl/private/walpanel-selfsigned.key;
+    
+    # SSL Security Settings
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
     
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
@@ -542,18 +569,8 @@ install_ssl() {
             sed -i "s|ssl_certificate .*|ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;|" "$NGINX_CONF"
             sed -i "s|ssl_certificate_key .*|ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;|" "$NGINX_CONF"
             
-            # Add SSL security settings
-            cat >> "$NGINX_CONF" << EOF
-
-    # SSL Security Settings
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384;
-    ssl_prefer_server_ciphers off;
-    ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 10m;
-    ssl_stapling on;
-    ssl_stapling_verify on;
-EOF
+            # Add SSL stapling
+            sed -i "/ssl_session_timeout 10m;/a\\    ssl_stapling on;\\    ssl_stapling_verify on;" "$NGINX_CONF"
             
             # Setup auto-renewal
             (crontab -l 2>/dev/null; echo "0 12 * * * /usr/bin/certbot renew --quiet") | crontab -
@@ -881,58 +898,76 @@ main_install() {
     log_message "Installation completed successfully"
 }
 
+# Function to read user input with timeout
+read_with_timeout() {
+    local timeout=30
+    local prompt="$1"
+    local var_name="$2"
+    
+    echo -n "$prompt"
+    if read -t $timeout -r input; then
+        eval "$var_name='$input'"
+        return 0
+    else
+        echo
+        print_error "Input timeout. Please try again."
+        return 1
+    fi
+}
+
 # Main script logic
 main() {
     while true; do
         show_menu
-        read -p "Enter your choice [1-9]: " choice
-        case $choice in
-            1)
-                main_install
-                read -p "Press Enter to continue..."
-                ;;
-            2)
-                check_root
-                install_dependencies_only
-                read -p "Press Enter to continue..."
-                ;;
-            3)
-                check_root
-                update_walpanel
-                read -p "Press Enter to continue..."
-                ;;
-            4)
-                check_root
-                uninstall_walpanel
-                read -p "Press Enter to continue..."
-                ;;
-            5)
-                backup_walpanel
-                read -p "Press Enter to continue..."
-                ;;
-            6)
-                check_root
-                restore_walpanel
-                read -p "Press Enter to continue..."
-                ;;
-            7)
-                view_service_status
-                read -p "Press Enter to continue..."
-                ;;
-            8)
-                view_logs
-                ;;
-            9)
-                print_status "Goodbye!"
-                echo
-                print_header "Copyright © 2025 Design and developed by Hmray"
-                exit 0
-                ;;
-            *)
-                print_error "Invalid option. Please try again."
-                read -p "Press Enter to continue..."
-                ;;
-        esac
+        if read_with_timeout "Enter your choice [1-9]: " choice; then
+            case $choice in
+                1)
+                    main_install
+                    read -p "Press Enter to continue..."
+                    ;;
+                2)
+                    check_root
+                    install_dependencies_only
+                    read -p "Press Enter to continue..."
+                    ;;
+                3)
+                    check_root
+                    update_walpanel
+                    read -p "Press Enter to continue..."
+                    ;;
+                4)
+                    check_root
+                    uninstall_walpanel
+                    read -p "Press Enter to continue..."
+                    ;;
+                5)
+                    backup_walpanel
+                    read -p "Press Enter to continue..."
+                    ;;
+                6)
+                    check_root
+                    restore_walpanel
+                    read -p "Press Enter to continue..."
+                    ;;
+                7)
+                    view_service_status
+                    read -p "Press Enter to continue..."
+                    ;;
+                8)
+                    view_logs
+                    ;;
+                9)
+                    print_status "Goodbye!"
+                    echo
+                    print_header "Copyright © 2025 Design and developed by Hmray"
+                    exit 0
+                    ;;
+                *)
+                    print_error "Invalid option. Please try again."
+                    read -p "Press Enter to continue..."
+                    ;;
+            esac
+        fi
     done
 }
 
