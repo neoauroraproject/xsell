@@ -79,6 +79,33 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Function to check and stop conflicting services
+check_conflicting_services() {
+    print_status "Checking for conflicting services..."
+    
+    # Check for Apache
+    if systemctl is-active --quiet apache2 2>/dev/null; then
+        print_warning "Apache2 is running and may conflict with Nginx"
+        read -p "Do you want to stop Apache2? (y/N): " stop_apache
+        if [[ "$stop_apache" == "y" ]]; then
+            systemctl stop apache2
+            systemctl disable apache2
+            print_success "Apache2 stopped and disabled"
+        fi
+    fi
+    
+    # Check for other web servers on port 80/443
+    if netstat -tlnp 2>/dev/null | grep -q ":80 "; then
+        print_warning "Port 80 is already in use"
+        netstat -tlnp | grep ":80 "
+    fi
+    
+    if netstat -tlnp 2>/dev/null | grep -q ":443 "; then
+        print_warning "Port 443 is already in use"
+        netstat -tlnp | grep ":443 "
+    fi
+}
+
 # Function to install dependencies based on OS
 install_dependencies() {
     print_header "Installing Dependencies..."
@@ -90,7 +117,7 @@ install_dependencies() {
         
         # Install required packages
         print_status "Installing required packages..."
-        apt-get install -y curl wget git nginx certbot python3-certbot-nginx ufw sqlite3 unzip openssl
+        apt-get install -y curl wget git nginx certbot python3-certbot-nginx ufw sqlite3 unzip openssl net-tools
         
         # Install Node.js 18.x
         if ! command_exists node; then
@@ -111,7 +138,7 @@ install_dependencies() {
         
         # Install required packages
         print_status "Installing required packages..."
-        yum install -y curl wget git nginx certbot python3-certbot-nginx firewalld sqlite unzip openssl
+        yum install -y curl wget git nginx certbot python3-certbot-nginx firewalld sqlite unzip openssl net-tools
         
         # Install Node.js 18.x
         if ! command_exists node; then
@@ -426,6 +453,15 @@ create_self_signed_cert() {
 configure_nginx() {
     print_header "Configuring Nginx..."
     
+    # Check for conflicting services
+    check_conflicting_services
+    
+    # Stop nginx if running
+    if systemctl is-active --quiet nginx; then
+        print_status "Stopping Nginx service..."
+        systemctl stop nginx
+    fi
+    
     # Backup existing default config if it exists
     if [[ -f /etc/nginx/sites-enabled/default ]]; then
         print_status "Backing up default Nginx configuration..."
@@ -514,11 +550,22 @@ EOF
         exit 1
     fi
     
-    # Restart Nginx
-    systemctl restart nginx
-    systemctl enable nginx
+    # Start and enable Nginx
+    print_status "Starting Nginx service..."
+    systemctl start nginx
+    if systemctl is-active --quiet nginx; then
+        print_success "Nginx started successfully"
+        systemctl enable nginx
+    else
+        print_error "Failed to start Nginx service"
+        print_status "Checking Nginx status..."
+        systemctl status nginx --no-pager -l
+        print_status "Checking Nginx error logs..."
+        tail -20 /var/log/nginx/error.log 2>/dev/null || echo "No error logs found"
+        exit 1
+    fi
     
-    print_success "Nginx configured and restarted"
+    print_success "Nginx configured and started"
 }
 
 # Function to configure firewall
@@ -618,8 +665,11 @@ start_services() {
         exit 1
     fi
     
-    # Restart Nginx to ensure everything is working
-    systemctl restart nginx
+    # Ensure Nginx is running
+    if ! systemctl is-active --quiet nginx; then
+        print_status "Restarting Nginx..."
+        systemctl restart nginx
+    fi
     
     print_success "All services started successfully"
 }
@@ -871,6 +921,23 @@ view_logs() {
     journalctl -u "$SERVICE_NAME" -f
 }
 
+# Function to read user input with timeout
+read_with_timeout() {
+    local timeout=30
+    local prompt="$1"
+    local var_name="$2"
+    
+    echo -n "$prompt"
+    if read -t $timeout -r input; then
+        eval "$var_name='$input'"
+        return 0
+    else
+        echo
+        print_error "Input timeout. Please try again."
+        return 1
+    fi
+}
+
 # Main installation function
 main_install() {
     print_header "Starting X-UI SELL Panel Installation by Hmray..."
@@ -896,23 +963,6 @@ main_install() {
     display_final_info
     
     log_message "Installation completed successfully"
-}
-
-# Function to read user input with timeout
-read_with_timeout() {
-    local timeout=30
-    local prompt="$1"
-    local var_name="$2"
-    
-    echo -n "$prompt"
-    if read -t $timeout -r input; then
-        eval "$var_name='$input'"
-        return 0
-    else
-        echo
-        print_error "Input timeout. Please try again."
-        return 1
-    fi
 }
 
 # Main script logic
