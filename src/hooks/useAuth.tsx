@@ -51,8 +51,14 @@ const _useAuthStateLogic = () => {
     try {
       // First check if server is reachable
       console.log('🏥 Checking server health...');
-      await apiClient.healthCheck();
-      console.log('✅ Server is reachable');
+      const healthResponse = await fetch('/api/health');
+      
+      if (!healthResponse.ok) {
+        throw new Error(`Server health check failed: ${healthResponse.status}`);
+      }
+      
+      const healthData = await healthResponse.json();
+      console.log('✅ Server is reachable:', healthData);
 
       const token = localStorage.getItem('auth_token');
       console.log('🎫 Token found:', !!token);
@@ -80,7 +86,16 @@ const _useAuthStateLogic = () => {
       }
     } catch (error: any) {
       console.error('❌ Auth check failed:', error);
-      setError(error.message);
+      
+      // More specific error messages
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        setError('Cannot connect to server. Please check your internet connection.');
+      } else if (error.message.includes('health check failed')) {
+        setError('Server is not responding. Please try again later.');
+      } else {
+        setError('Authentication check failed. Please try logging in again.');
+      }
+      
       localStorage.removeItem('auth_token');
       setIsAuthenticated(false);
       setUser(null);
@@ -103,26 +118,42 @@ const _useAuthStateLogic = () => {
 
       // First check if server is reachable
       console.log('🏥 Checking server health before login...');
-      await apiClient.healthCheck();
-      console.log('✅ Server is reachable, proceeding with login');
+      const healthResponse = await fetch('/api/health');
+      
+      if (!healthResponse.ok) {
+        throw new Error(`Server is not responding (${healthResponse.status})`);
+      }
+      
+      const healthData = await healthResponse.json();
+      console.log('✅ Server is reachable, proceeding with login:', healthData);
 
       const response = await apiClient.login(username, password);
       console.log('📡 Login response:', response);
       
-      if (response.success && response.data.user && response.data.token) {
+      if (response.success && response.data && response.data.user && response.data.token) {
         console.log('✅ Login successful, setting user state');
         setIsAuthenticated(true);
         setUser(response.data.user);
         setError(null);
         return true;
       } else {
-        console.log('❌ Login failed - invalid response format');
-        setError(response.message || 'Login failed - invalid response');
+        console.log('❌ Login failed - invalid response format:', response);
+        setError(response.message || 'Invalid username or password');
         return false;
       }
     } catch (error: any) {
       console.error('❌ Login failed:', error);
-      setError(error.message || 'Login failed. Please check your credentials and try again.');
+      
+      // More specific error messages
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        setError('Cannot connect to server. Please check your internet connection.');
+      } else if (error.message.includes('not responding')) {
+        setError('Server is not responding. Please try again later.');
+      } else if (error.message.includes('Invalid credentials') || error.message.includes('401')) {
+        setError('Invalid username or password');
+      } else {
+        setError(error.message || 'Login failed. Please try again.');
+      }
       return false;
     } finally {
       setLoading(false);
