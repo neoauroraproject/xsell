@@ -22,6 +22,8 @@ SERVICE_NAME="walpanel"
 NGINX_CONF="/etc/nginx/sites-available/walpanel"
 NGINX_ENABLED="/etc/nginx/sites-enabled/walpanel"
 LOG_FILE="/var/log/walpanel-install.log"
+GITHUB_REPO="https://github.com/neoauroraproject/xsell"
+TEMP_DIR="/tmp/xsell-install"
 
 # Function to print colored output
 print_status() {
@@ -235,63 +237,98 @@ create_user() {
 install_walpanel() {
     print_header "Installing X-UI SELL Panel by Hmray..."
     
-    # Get the current script directory (where the project files are located)
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    # Create temporary directory
+    print_status "Creating temporary directory..."
+    rm -rf "$TEMP_DIR"
+    mkdir -p "$TEMP_DIR"
     
-    # Create directory
+    # Download the project from GitHub
+    print_status "Downloading X-UI SELL Panel from GitHub..."
+    cd "$TEMP_DIR"
+    
+    if command_exists git; then
+        git clone "$GITHUB_REPO.git" . || {
+            print_error "Failed to clone repository"
+            exit 1
+        }
+    else
+        # Fallback to wget if git is not available
+        wget -O master.zip "$GITHUB_REPO/archive/refs/heads/main.zip" || {
+            print_error "Failed to download repository"
+            exit 1
+        }
+        unzip master.zip
+        mv xsell-main/* .
+        rm -rf xsell-main master.zip
+    fi
+    
+    # Create installation directory
     print_status "Creating installation directory..."
     mkdir -p "$WALPANEL_DIR"
     
     # Copy server directory and its contents
     print_status "Copying server files..."
-    if [[ -d "$SCRIPT_DIR/server" ]]; then
-        cp -r "$SCRIPT_DIR/server" "$WALPANEL_DIR/"
+    if [[ -d "server" ]]; then
+        cp -r server "$WALPANEL_DIR/"
         print_success "Server files copied"
     else
-        print_error "Server directory not found in $SCRIPT_DIR"
+        print_error "Server directory not found in downloaded files"
         exit 1
     fi
     
     # Copy frontend source files
     print_status "Copying frontend source files..."
-    if [[ -d "$SCRIPT_DIR/src" ]] && [[ -f "$SCRIPT_DIR/package.json" ]]; then
+    if [[ -d "src" ]] && [[ -f "package.json" ]]; then
         # Copy all frontend related files
-        cp -r "$SCRIPT_DIR/src" "$WALPANEL_DIR/"
-        cp -r "$SCRIPT_DIR/public" "$WALPANEL_DIR/" 2>/dev/null || true
-        cp "$SCRIPT_DIR/package.json" "$WALPANEL_DIR/"
-        cp "$SCRIPT_DIR/package-lock.json" "$WALPANEL_DIR/" 2>/dev/null || true
-        cp "$SCRIPT_DIR/vite.config.ts" "$WALPANEL_DIR/" 2>/dev/null || true
-        cp "$SCRIPT_DIR/tsconfig.json" "$WALPANEL_DIR/" 2>/dev/null || true
-        cp "$SCRIPT_DIR/tsconfig.app.json" "$WALPANEL_DIR/" 2>/dev/null || true
-        cp "$SCRIPT_DIR/tsconfig.node.json" "$WALPANEL_DIR/" 2>/dev/null || true
-        cp "$SCRIPT_DIR/tailwind.config.js" "$WALPANEL_DIR/" 2>/dev/null || true
-        cp "$SCRIPT_DIR/postcss.config.js" "$WALPANEL_DIR/" 2>/dev/null || true
-        cp "$SCRIPT_DIR/eslint.config.js" "$WALPANEL_DIR/" 2>/dev/null || true
-        cp "$SCRIPT_DIR/index.html" "$WALPANEL_DIR/" 2>/dev/null || true
+        cp -r src "$WALPANEL_DIR/"
+        [[ -d "public" ]] && cp -r public "$WALPANEL_DIR/"
+        cp package.json "$WALPANEL_DIR/"
+        [[ -f "package-lock.json" ]] && cp package-lock.json "$WALPANEL_DIR/"
+        [[ -f "vite.config.ts" ]] && cp vite.config.ts "$WALPANEL_DIR/"
+        [[ -f "tsconfig.json" ]] && cp tsconfig.json "$WALPANEL_DIR/"
+        [[ -f "tsconfig.app.json" ]] && cp tsconfig.app.json "$WALPANEL_DIR/"
+        [[ -f "tsconfig.node.json" ]] && cp tsconfig.node.json "$WALPANEL_DIR/"
+        [[ -f "tailwind.config.js" ]] && cp tailwind.config.js "$WALPANEL_DIR/"
+        [[ -f "postcss.config.js" ]] && cp postcss.config.js "$WALPANEL_DIR/"
+        [[ -f "eslint.config.js" ]] && cp eslint.config.js "$WALPANEL_DIR/"
+        [[ -f "index.html" ]] && cp index.html "$WALPANEL_DIR/"
         print_success "Frontend files copied"
     else
-        print_error "Frontend files not found in $SCRIPT_DIR"
+        print_error "Frontend files not found in downloaded files"
         exit 1
     fi
     
     # Install backend dependencies
     print_status "Installing backend dependencies..."
     cd "$WALPANEL_DIR/server"
-    npm install
+    npm install || {
+        print_error "Failed to install backend dependencies"
+        exit 1
+    }
     print_success "Backend dependencies installed"
     
     # Install frontend dependencies and build
     print_status "Installing frontend dependencies..."
     cd "$WALPANEL_DIR"
-    npm install
+    npm install || {
+        print_error "Failed to install frontend dependencies"
+        exit 1
+    }
     
     print_status "Building frontend..."
-    npm run build
+    npm run build || {
+        print_error "Failed to build frontend"
+        exit 1
+    }
     print_success "Frontend built successfully"
     
     # Set permissions
     chown -R walpanel:walpanel "$WALPANEL_DIR"
     chmod -R 755 "$WALPANEL_DIR"
+    
+    # Clean up temporary directory
+    print_status "Cleaning up temporary files..."
+    rm -rf "$TEMP_DIR"
     
     print_success "X-UI SELL Panel by Hmray installed successfully"
 }
@@ -663,14 +700,36 @@ update_walpanel() {
     print_status "Creating backup..."
     cp -r "$WALPANEL_DIR" "$WALPANEL_DIR.backup.$(date +%Y%m%d_%H%M%S)"
     
-    # Update code (this would download new version in real scenario)
+    # Download and update
+    print_status "Downloading latest version..."
+    rm -rf "$TEMP_DIR"
+    mkdir -p "$TEMP_DIR"
+    cd "$TEMP_DIR"
+    
+    if command_exists git; then
+        git clone "$GITHUB_REPO.git" .
+    else
+        wget -O master.zip "$GITHUB_REPO/archive/refs/heads/main.zip"
+        unzip master.zip
+        mv xsell-main/* .
+        rm -rf xsell-main master.zip
+    fi
+    
+    # Update files
     print_status "Updating X-UI SELL Panel..."
+    [[ -d "server" ]] && cp -r server/* "$WALPANEL_DIR/server/"
+    [[ -d "src" ]] && cp -r src "$WALPANEL_DIR/"
+    [[ -f "package.json" ]] && cp package.json "$WALPANEL_DIR/"
+    
     cd "$WALPANEL_DIR/server"
     npm update
     
     cd "$WALPANEL_DIR"
     npm update
     npm run build
+    
+    # Clean up
+    rm -rf "$TEMP_DIR"
     
     # Restart service
     print_status "Starting X-UI SELL Panel service..."
