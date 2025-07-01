@@ -17,6 +17,7 @@ interface AuthContextType {
   loading: boolean;
   isSuperAdmin: boolean;
   error: string | null;
+  clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,6 +39,10 @@ const _useAuthStateLogic = () => {
   useEffect(() => {
     checkAuthStatus();
   }, []);
+
+  const clearError = () => {
+    setError(null);
+  };
 
   const checkAuthStatus = async () => {
     console.log('🔍 Checking authentication status...');
@@ -61,6 +66,7 @@ const _useAuthStateLogic = () => {
           console.log('✅ User authenticated:', response.data.user);
           setIsAuthenticated(true);
           setUser(response.data.user);
+          setError(null);
         } else {
           console.log('❌ Invalid token, removing...');
           localStorage.removeItem('auth_token');
@@ -89,6 +95,12 @@ const _useAuthStateLogic = () => {
     setError(null);
     
     try {
+      // Validate inputs
+      if (!username || !password) {
+        setError('Username and password are required');
+        return false;
+      }
+
       // First check if server is reachable
       console.log('🏥 Checking server health before login...');
       await apiClient.healthCheck();
@@ -105,12 +117,12 @@ const _useAuthStateLogic = () => {
         return true;
       } else {
         console.log('❌ Login failed - invalid response format');
-        setError('Login failed - invalid response');
+        setError(response.message || 'Login failed - invalid response');
         return false;
       }
     } catch (error: any) {
       console.error('❌ Login failed:', error);
-      setError(error.message || 'Login failed');
+      setError(error.message || 'Login failed. Please check your credentials and try again.');
       return false;
     } finally {
       setLoading(false);
@@ -141,7 +153,8 @@ const _useAuthStateLogic = () => {
     logout, 
     loading, 
     isSuperAdmin,
-    error
+    error,
+    clearError
   };
 };
 

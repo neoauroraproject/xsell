@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Shield, Lock, User, Eye, EyeOff, AlertCircle, Wifi } from 'lucide-react';
+import { Shield, Lock, User, Eye, EyeOff, AlertCircle, Wifi, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const Login: React.FC = () => {
@@ -9,18 +9,52 @@ export const Login: React.FC = () => {
   const [password, setPassword] = useState('admin123');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const navigate = useNavigate();
-  const { login, error } = useAuth();
+  const { login, error, clearError, isAuthenticated } = useAuth();
+
+  // Check server status on component mount
+  useEffect(() => {
+    checkServerStatus();
+  }, []);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
+
+  const checkServerStatus = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/health');
+      if (response.ok) {
+        setServerStatus('online');
+      } else {
+        setServerStatus('offline');
+      }
+    } catch (error) {
+      setServerStatus('offline');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('📝 Form submitted with:', { username, password: '***' });
     
+    // Clear any previous errors
+    clearError();
+    
+    // Validate inputs
+    if (!username.trim() || !password.trim()) {
+      return;
+    }
+
     setLoading(true);
 
     try {
       console.log('🔐 Calling login function...');
-      const success = await login(username, password);
+      const success = await login(username.trim(), password);
       console.log('🎯 Login result:', success);
       
       if (success) {
@@ -28,11 +62,34 @@ export const Login: React.FC = () => {
         navigate('/');
       } else {
         console.log('❌ Login failed');
+        // Error is handled by the auth hook
       }
     } catch (err: any) {
       console.error('❌ Login error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getServerStatusIcon = () => {
+    switch (serverStatus) {
+      case 'online':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'offline':
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
+      default:
+        return <Wifi className="h-4 w-4 text-yellow-500 animate-pulse" />;
+    }
+  };
+
+  const getServerStatusText = () => {
+    switch (serverStatus) {
+      case 'online':
+        return 'Server Online';
+      case 'offline':
+        return 'Server Offline';
+      default:
+        return 'Checking...';
     }
   };
 
@@ -58,13 +115,20 @@ export const Login: React.FC = () => {
             <p className="mt-2 text-gray-600 dark:text-gray-400">Professional X-UI Management System</p>
           </div>
 
-          {/* Connection Status */}
+          {/* Server Status */}
           <div className="mb-6">
             <div className="flex items-center justify-center space-x-2 text-sm">
-              <Wifi className="h-4 w-4 text-green-500" />
-              <span className="text-gray-600 dark:text-gray-400">
-                Server: {window.location.protocol}//{window.location.host}
+              {getServerStatusIcon()}
+              <span className={`${
+                serverStatus === 'online' ? 'text-green-600' : 
+                serverStatus === 'offline' ? 'text-red-600' : 
+                'text-yellow-600'
+              }`}>
+                {getServerStatusText()}
               </span>
+            </div>
+            <div className="text-center text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {window.location.protocol}//{window.location.host}
             </div>
           </div>
 
@@ -78,6 +142,20 @@ export const Login: React.FC = () => {
               >
                 <AlertCircle className="h-5 w-5 flex-shrink-0" />
                 <span className="text-sm">{error}</span>
+              </motion.div>
+            )}
+
+            {serverStatus === 'offline' && (
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-400 px-4 py-3 rounded-lg flex items-center space-x-2"
+              >
+                <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium">Server Connection Issue</p>
+                  <p>Please ensure the backend server is running on port 3001</p>
+                </div>
               </motion.div>
             )}
 
@@ -95,6 +173,7 @@ export const Login: React.FC = () => {
                   onChange={(e) => setUsername(e.target.value)}
                   className="pl-10 w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                   placeholder="Enter your username"
+                  disabled={loading || serverStatus === 'offline'}
                 />
               </div>
             </div>
@@ -113,11 +192,13 @@ export const Login: React.FC = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 pr-10 w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                   placeholder="Enter your password"
+                  disabled={loading || serverStatus === 'offline'}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  disabled={loading}
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -137,7 +218,7 @@ export const Login: React.FC = () => {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
-              disabled={loading}
+              disabled={loading || serverStatus === 'offline' || !username.trim() || !password.trim()}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
               {loading ? (
@@ -149,6 +230,17 @@ export const Login: React.FC = () => {
                 'Sign in'
               )}
             </motion.button>
+
+            {/* Retry Server Connection */}
+            {serverStatus === 'offline' && (
+              <button
+                type="button"
+                onClick={checkServerStatus}
+                className="w-full text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                Retry Connection
+              </button>
+            )}
           </form>
         </div>
 
