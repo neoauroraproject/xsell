@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Shield, Lock, User, Eye, EyeOff } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Shield, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export const Login: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -10,7 +10,7 @@ export const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, error, clearError } = useAuth();
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -18,6 +18,13 @@ export const Login: React.FC = () => {
       navigate('/');
     }
   }, [isAuthenticated, navigate]);
+
+  // Clear error when inputs change
+  useEffect(() => {
+    if (error) {
+      clearError();
+    }
+  }, [username, password, clearError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +42,7 @@ export const Login: React.FC = () => {
       if (success) {
         navigate('/');
       }
+      // Error handling is done in the auth hook
     } catch (err: any) {
       console.error('Login error:', err);
     } finally {
@@ -63,6 +71,23 @@ export const Login: React.FC = () => {
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">X-UI SELL Panel</h2>
             <p className="mt-2 text-gray-600 dark:text-gray-400">Professional X-UI Management System</p>
           </div>
+
+          {/* Error Message */}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+              >
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                  <span className="text-sm text-red-800 dark:text-red-200">{error}</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-6">

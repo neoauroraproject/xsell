@@ -103,6 +103,30 @@ router.get('/traffic/:panelId', authenticateToken, async (req, res) => {
   }
 });
 
+// Download panel database
+router.get('/database/:panelId', authenticateToken, async (req, res) => {
+  try {
+    const { panelId } = req.params;
+    console.log('Downloading database for panel:', panelId);
+    
+    const response = await xuiService.downloadDatabase(panelId);
+    
+    // Set appropriate headers for file download
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="panel-${panelId}-database.db"`);
+    
+    // Pipe the response stream to the client
+    response.data.pipe(res);
+  } catch (error) {
+    console.error('Download database error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to download database',
+      error: error.message
+    });
+  }
+});
+
 // Create X-UI client
 router.post('/clients/:panelId', authenticateToken, async (req, res) => {
   try {

@@ -75,12 +75,22 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
+    // Insert panel with all fields
     const result = await db.runAsync(
-      'INSERT INTO panels (name, url, username, password, status) VALUES (?, ?, ?, ?, ?)',
-      [name, url, username, password, 'active']
+      `INSERT INTO panels (name, url, username, password, status, vpsUsername, vpsPassword) 
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [name, url, username, password, 'active', vpsUsername || null, vpsPassword || null]
     );
 
+    if (!result || !result.lastID) {
+      throw new Error('Failed to insert panel - no ID returned');
+    }
+
     const newPanel = await db.getAsync('SELECT * FROM panels WHERE id = ?', [result.lastID]);
+
+    if (!newPanel) {
+      throw new Error('Failed to retrieve created panel');
+    }
 
     console.log('Panel created successfully:', newPanel);
 
@@ -102,7 +112,7 @@ router.post('/', authenticateToken, async (req, res) => {
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, url, subUrl, username, password, status } = req.body;
+    const { name, url, subUrl, username, password, status, vpsUsername, vpsPassword } = req.body;
 
     const panel = await db.getAsync('SELECT * FROM panels WHERE id = ?', [id]);
     if (!panel) {
@@ -113,13 +123,16 @@ router.put('/:id', authenticateToken, async (req, res) => {
     }
 
     await db.runAsync(
-      'UPDATE panels SET name = ?, url = ?, username = ?, password = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      `UPDATE panels SET name = ?, url = ?, username = ?, password = ?, status = ?, 
+       vpsUsername = ?, vpsPassword = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
       [
         name || panel.name, 
         url || panel.url, 
         username || panel.username, 
         password || panel.password, 
-        status || panel.status, 
+        status || panel.status,
+        vpsUsername !== undefined ? vpsUsername : panel.vpsUsername,
+        vpsPassword !== undefined ? vpsPassword : panel.vpsPassword,
         id
       ]
     );

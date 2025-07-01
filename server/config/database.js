@@ -34,7 +34,7 @@ export async function initDatabase() {
       )
     `);
 
-    // Create panels table
+    // Create panels table with VPS access fields
     await db.runAsync(`
       CREATE TABLE IF NOT EXISTS panels (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,10 +43,24 @@ export async function initDatabase() {
         username TEXT NOT NULL,
         password TEXT NOT NULL,
         status TEXT DEFAULT 'inactive',
+        vpsUsername TEXT,
+        vpsPassword TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Check if VPS columns exist, if not add them
+    const tableInfo = await db.allAsync('PRAGMA table_info(panels)');
+    const hasVpsUsername = tableInfo.some(column => column.name === 'vpsUsername');
+    const hasVpsPassword = tableInfo.some(column => column.name === 'vpsPassword');
+    
+    if (!hasVpsUsername) {
+      await db.runAsync('ALTER TABLE panels ADD COLUMN vpsUsername TEXT');
+    }
+    if (!hasVpsPassword) {
+      await db.runAsync('ALTER TABLE panels ADD COLUMN vpsPassword TEXT');
+    }
 
     // Create users table
     await db.runAsync(`
@@ -77,8 +91,8 @@ export async function initDatabase() {
     `);
 
     // Check if description column exists, if not add it
-    const tableInfo = await db.allAsync('PRAGMA table_info(settings)');
-    const hasDescriptionColumn = tableInfo.some(column => column.name === 'description');
+    const settingsTableInfo = await db.allAsync('PRAGMA table_info(settings)');
+    const hasDescriptionColumn = settingsTableInfo.some(column => column.name === 'description');
     
     if (!hasDescriptionColumn) {
       await db.runAsync('ALTER TABLE settings ADD COLUMN description TEXT');

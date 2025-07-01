@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import { Card } from '../components/UI/Card';
 import { StatCard } from '../components/UI/StatCard';
 import { LoadingSpinner } from '../components/UI/LoadingSpinner';
-import { useSystemStats } from '../hooks/useApi';
+import { useSystemStats, usePanels } from '../hooks/useApi';
 import { useLiveStats } from '../hooks/useAdvancedApi';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Activity, Cpu, HardDrive, Wifi, Users, TrendingUp, Server } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const LiveStats: React.FC = () => {
-  const { stats, loading } = useSystemStats();
+  const { panels } = usePanels();
+  const [selectedPanel, setSelectedPanel] = useState<string>('');
+  const { stats, loading } = useSystemStats(selectedPanel);
   const liveStats = useLiveStats();
 
   if (loading) {
@@ -27,11 +29,46 @@ export const LiveStats: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Live System Statistics</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">Real-time monitoring and performance metrics</p>
         </div>
-        <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-          <span className="text-sm text-gray-600 dark:text-gray-400">Live</span>
+        <div className="flex items-center space-x-4">
+          <select
+            value={selectedPanel}
+            onChange={(e) => setSelectedPanel(e.target.value)}
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+          >
+            <option value="">All Panels</option>
+            {panels.map(panel => (
+              <option key={panel.id} value={panel.id}>{panel.name}</option>
+            ))}
+          </select>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Live</span>
+          </div>
         </div>
       </motion.div>
+
+      {/* Panel Info */}
+      {selectedPanel && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+        >
+          <Card className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-700">
+            <div className="flex items-center space-x-3">
+              <Server className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {panels.find(p => p.id === selectedPanel)?.name || 'Selected Panel'}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Real-time statistics from 3x-ui panel
+                </p>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Real-time Stats Grid */}
       <motion.div
@@ -65,10 +102,10 @@ export const LiveStats: React.FC = () => {
         />
         
         <StatCard
-          title="Server Status"
-          value="Online"
+          title="Total Inbounds"
+          value={stats?.totalInbounds || 0}
           icon={Server}
-          color="green"
+          color="yellow"
         />
       </motion.div>
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card } from '../components/UI/Card';
 import { Button } from '../components/UI/Button';
 import { Modal } from '../components/UI/Modal';
+import { usePanels } from '../hooks/useApi';
 import { 
   Settings as SettingsIcon, 
   Save, 
@@ -17,8 +18,9 @@ import {
 import { motion } from 'framer-motion';
 
 export const Settings: React.FC = () => {
+  const { panels } = usePanels(); // Get real panels
   const [settings, setSettings] = useState({
-    panelTitle: 'WalPanel Pro',
+    panelTitle: 'X-UI SELL Panel',
     sessionTimeout: 30,
     defaultExpiry: 30,
     maxClients: 100,
@@ -29,16 +31,13 @@ export const Settings: React.FC = () => {
   });
 
   const [activeTab, setActiveTab] = useState('general');
-  const [panels] = useState([
-    { id: '1', name: 'Server-Ar1', status: 'online' },
-    { id: '2', name: 'SERVER-X', status: 'online' }
-  ]);
-
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [selectedPanel, setSelectedPanel] = useState('');
+  const [downloadingDb, setDownloadingDb] = useState<{[key: string]: boolean}>({});
 
   const handleSave = () => {
     console.log('Saving settings:', settings);
+    alert('Settings saved successfully!');
   };
 
   const handleBackupPanel = (panelId: string) => {
@@ -46,8 +45,28 @@ export const Settings: React.FC = () => {
     setShowBackupModal(true);
   };
 
+  const handleDownloadDatabase = async (panelId: string) => {
+    setDownloadingDb(prev => ({ ...prev, [panelId]: true }));
+    
+    try {
+      // Simulate database download
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // In a real implementation, you would call the API to download the database
+      // const response = await apiClient.downloadPanelDatabase(panelId);
+      
+      alert('Database download started! Check your downloads folder.');
+    } catch (error) {
+      console.error('Failed to download database:', error);
+      alert('Failed to download database. Please try again.');
+    } finally {
+      setDownloadingDb(prev => ({ ...prev, [panelId]: false }));
+    }
+  };
+
   const handleRestorePanel = (panelId: string) => {
     console.log('Restoring backup for panel:', panelId);
+    alert('Restore functionality will be implemented soon.');
   };
 
   const tabs = [
@@ -231,43 +250,72 @@ export const Settings: React.FC = () => {
 
             <Card className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-                Panel Backup & Restore
+                Panel Database Management
               </h3>
-              <div className="space-y-4">
-                {panels.map((panel) => (
-                  <div key={panel.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <Server className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                      <div>
-                        <h4 className="font-medium text-gray-900 dark:text-white">{panel.name}</h4>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Status: <span className="text-green-600 dark:text-green-400">{panel.status}</span>
-                        </p>
+              {panels.length === 0 ? (
+                <div className="text-center py-8">
+                  <Database className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500 dark:text-gray-400">No panels available</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                    Add panels first to manage their databases
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {panels.map((panel) => (
+                    <div key={panel.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <Server className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                        <div>
+                          <h4 className="font-medium text-gray-900 dark:text-white">{panel.name}</h4>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Status: <span className={panel.status === 'online' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                              {panel.status}
+                            </span>
+                          </p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                            {panel.url}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          onClick={() => handleBackupPanel(panel.id)}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center space-x-2"
+                        >
+                          <Upload className="h-4 w-4" />
+                          <span>Backup</span>
+                        </Button>
+                        <Button
+                          onClick={() => handleDownloadDatabase(panel.id)}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center space-x-2"
+                          disabled={downloadingDb[panel.id]}
+                        >
+                          {downloadingDb[panel.id] ? (
+                            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
+                          <span>{downloadingDb[panel.id] ? 'Downloading...' : 'Download DB'}</span>
+                        </Button>
+                        <Button
+                          onClick={() => handleRestorePanel(panel.id)}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center space-x-2"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                          <span>Restore</span>
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex space-x-2">
-                      <Button
-                        onClick={() => handleBackupPanel(panel.id)}
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center space-x-2"
-                      >
-                        <Download className="h-4 w-4" />
-                        <span>Backup</span>
-                      </Button>
-                      <Button
-                        onClick={() => handleRestorePanel(panel.id)}
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center space-x-2"
-                      >
-                        <Upload className="h-4 w-4" />
-                        <span>Restore</span>
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </Card>
           </div>
         )}

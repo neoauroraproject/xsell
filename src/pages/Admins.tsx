@@ -3,19 +3,19 @@ import { Card } from '../components/UI/Card';
 import { Button } from '../components/UI/Button';
 import { LoadingSpinner } from '../components/UI/LoadingSpinner';
 import { Modal } from '../components/UI/Modal';
-import { useAdmins } from '../hooks/useApi';
+import { useAdmins, usePanels } from '../hooks/useApi';
 import { Plus, Edit, Trash2, Shield, UserCog, Eye, EyeOff, TrendingUp, Calendar, Database, Users, Server, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const Admins: React.FC = () => {
   const { admins, loading, setAdmins } = useAdmins();
+  const { panels } = usePanels(); // Get real panels
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showTrafficModal, setShowTrafficModal] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState<any>(null);
   const [newAdmin, setNewAdmin] = useState({
     username: '',
-    email: '',
     password: '',
     role: 'regular_admin' as 'super_admin' | 'regular_admin',
     trafficLimit: '',
@@ -24,19 +24,11 @@ export const Admins: React.FC = () => {
   });
   const [editAdmin, setEditAdmin] = useState({
     username: '',
-    email: '',
     role: 'regular_admin' as 'super_admin' | 'regular_admin',
     trafficLimit: '',
     timeLimit: '',
     selectedPanels: [] as string[]
   });
-
-  // Mock panels available for assignment
-  const mockPanels = [
-    { id: '1', name: 'Server-Ar1', url: 'https://panel1.example.com' },
-    { id: '2', name: 'SERVER-X', url: 'https://panel2.example.com' },
-    { id: '3', name: 'Server-EU', url: 'https://panel3.example.com' }
-  ];
 
   const [panelInbounds, setPanelInbounds] = useState<{[key: string]: string}>({});
   const [editPanelInbounds, setEditPanelInbounds] = useState<{[key: string]: string}>({});
@@ -51,7 +43,7 @@ export const Admins: React.FC = () => {
     const admin = {
       id: Date.now().toString(),
       username: newAdmin.username,
-      email: newAdmin.email,
+      email: `${newAdmin.username}@xsell.local`, // Auto-generate email
       role: newAdmin.role,
       status: 'active' as const,
       createdAt: new Date().toISOString(),
@@ -69,7 +61,6 @@ export const Admins: React.FC = () => {
     setShowAddModal(false);
     setNewAdmin({
       username: '',
-      email: '',
       password: '',
       role: 'regular_admin',
       trafficLimit: '',
@@ -83,7 +74,6 @@ export const Admins: React.FC = () => {
     setSelectedAdmin(admin);
     setEditAdmin({
       username: admin.username,
-      email: admin.email,
       role: admin.role,
       trafficLimit: admin.trafficLimit ? (admin.trafficLimit / (1024 * 1024 * 1024)).toString() : '',
       timeLimit: admin.timeLimit ? admin.timeLimit.toString() : '',
@@ -113,7 +103,6 @@ export const Admins: React.FC = () => {
           ? {
               ...admin,
               username: editAdmin.username,
-              email: editAdmin.email,
               role: editAdmin.role,
               trafficLimit: parseInt(editAdmin.trafficLimit) * 1024 * 1024 * 1024,
               timeLimit: parseInt(editAdmin.timeLimit),
@@ -256,12 +245,12 @@ export const Admins: React.FC = () => {
                   <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Assigned Panels</h4>
                   <div className="space-y-2">
                     {admin.panelAssignments.map((assignment: any, idx: number) => {
-                      const panel = mockPanels.find(p => p.id === assignment.panelId);
+                      const panel = panels.find(p => p.id === assignment.panelId);
                       return (
                         <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded">
                           <div className="flex items-center space-x-2">
                             <Server className="h-4 w-4 text-blue-500" />
-                            <span className="text-sm text-gray-900 dark:text-white">{panel?.name}</span>
+                            <span className="text-sm text-gray-900 dark:text-white">{panel?.name || 'Unknown Panel'}</span>
                           </div>
                           <span className="text-xs text-gray-500 dark:text-gray-400">
                             Inbound: {assignment.inboundId}
@@ -415,7 +404,7 @@ export const Admins: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Username
+                Username *
               </label>
               <input
                 type="text"
@@ -423,34 +412,23 @@ export const Admins: React.FC = () => {
                 onChange={(e) => setNewAdmin({...newAdmin, username: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 placeholder="Enter username"
+                required
               />
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Email
+                Password *
               </label>
               <input
-                type="email"
-                value={newAdmin.email}
-                onChange={(e) => setNewAdmin({...newAdmin, email: e.target.value})}
+                type="password"
+                value={newAdmin.password}
+                onChange={(e) => setNewAdmin({...newAdmin, password: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                placeholder="Enter email"
+                placeholder="Enter password"
+                required
               />
             </div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Password
-            </label>
-            <input
-              type="password"
-              value={newAdmin.password}
-              onChange={(e) => setNewAdmin({...newAdmin, password: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-              placeholder="Enter password"
-            />
           </div>
           
           <div>
@@ -474,47 +452,55 @@ export const Admins: React.FC = () => {
               {/* Panel Assignment */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                  Assign Panels
+                  Assign Panels *
                 </label>
-                <div className="space-y-3">
-                  {mockPanels.map(panel => (
-                    <div key={panel.id} className="flex items-center justify-between p-3 border border-gray-300 dark:border-gray-600 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <input
-                          type="checkbox"
-                          id={`panel-${panel.id}`}
-                          checked={newAdmin.selectedPanels.includes(panel.id)}
-                          onChange={() => handlePanelSelection(panel.id)}
-                          className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-                        />
-                        <label htmlFor={`panel-${panel.id}`} className="text-sm text-gray-700 dark:text-gray-300">
-                          <div className="font-medium">{panel.name}</div>
-                          <div className="text-xs text-gray-500">{panel.url}</div>
-                        </label>
-                      </div>
-                      
-                      {newAdmin.selectedPanels.includes(panel.id) && (
-                        <div className="flex items-center space-x-2">
-                          <label className="text-xs text-gray-600 dark:text-gray-400">Inbound ID:</label>
+                {panels.length === 0 ? (
+                  <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                      No panels available. Please add panels first before creating regular admins.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {panels.map(panel => (
+                      <div key={panel.id} className="flex items-center justify-between p-3 border border-gray-300 dark:border-gray-600 rounded-lg">
+                        <div className="flex items-center space-x-3">
                           <input
-                            type="text"
-                            value={panelInbounds[panel.id] || ''}
-                            onChange={(e) => handleInboundChange(panel.id, e.target.value)}
-                            className="w-16 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
-                            placeholder="1"
+                            type="checkbox"
+                            id={`panel-${panel.id}`}
+                            checked={newAdmin.selectedPanels.includes(panel.id)}
+                            onChange={() => handlePanelSelection(panel.id)}
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                           />
+                          <label htmlFor={`panel-${panel.id}`} className="text-sm text-gray-700 dark:text-gray-300">
+                            <div className="font-medium">{panel.name}</div>
+                            <div className="text-xs text-gray-500">{panel.url}</div>
+                          </label>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                        
+                        {newAdmin.selectedPanels.includes(panel.id) && (
+                          <div className="flex items-center space-x-2">
+                            <label className="text-xs text-gray-600 dark:text-gray-400">Inbound ID:</label>
+                            <input
+                              type="text"
+                              value={panelInbounds[panel.id] || ''}
+                              onChange={(e) => handleInboundChange(panel.id, e.target.value)}
+                              className="w-16 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+                              placeholder="1"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Traffic and Time Limits */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Traffic Limit (GB)
+                    Traffic Limit (GB) *
                   </label>
                   <input
                     type="number"
@@ -523,12 +509,13 @@ export const Admins: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                     placeholder="Enter traffic limit in GB"
                     min="1"
+                    required
                   />
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Time Limit (Days)
+                    Time Limit (Days) *
                   </label>
                   <input
                     type="number"
@@ -537,6 +524,7 @@ export const Admins: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                     placeholder="Enter time limit in days"
                     min="1"
+                    required
                   />
                 </div>
               </div>
@@ -551,9 +539,12 @@ export const Admins: React.FC = () => {
               onClick={handleAddAdmin} 
               disabled={
                 !newAdmin.username || 
-                !newAdmin.email || 
                 !newAdmin.password ||
-                (newAdmin.role === 'regular_admin' && newAdmin.selectedPanels.length === 0)
+                (newAdmin.role === 'regular_admin' && (
+                  newAdmin.selectedPanels.length === 0 ||
+                  !newAdmin.trafficLimit ||
+                  !newAdmin.timeLimit
+                ))
               }
               className="bg-purple-600 hover:bg-purple-700"
             >
@@ -582,30 +573,17 @@ export const Admins: React.FC = () => {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Email
+                Role
               </label>
-              <input
-                type="email"
-                value={editAdmin.email}
-                onChange={(e) => setEditAdmin({...editAdmin, email: e.target.value})}
+              <select
+                value={editAdmin.role}
+                onChange={(e) => setEditAdmin({...editAdmin, role: e.target.value as any})}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                placeholder="Enter email"
-              />
+              >
+                <option value="regular_admin">Regular Admin</option>
+                <option value="super_admin">Super Admin</option>
+              </select>
             </div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Role
-            </label>
-            <select
-              value={editAdmin.role}
-              onChange={(e) => setEditAdmin({...editAdmin, role: e.target.value as any})}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-            >
-              <option value="regular_admin">Regular Admin</option>
-              <option value="super_admin">Super Admin</option>
-            </select>
           </div>
 
           {editAdmin.role === 'regular_admin' && (
@@ -618,7 +596,7 @@ export const Admins: React.FC = () => {
                   Assign Panels
                 </label>
                 <div className="space-y-3">
-                  {mockPanels.map(panel => (
+                  {panels.map(panel => (
                     <div key={panel.id} className="flex items-center justify-between p-3 border border-gray-300 dark:border-gray-600 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <input
@@ -691,8 +669,7 @@ export const Admins: React.FC = () => {
             <Button 
               onClick={handleUpdateAdmin} 
               disabled={
-                !editAdmin.username || 
-                !editAdmin.email ||
+                !editAdmin.username ||
                 (editAdmin.role === 'regular_admin' && editAdmin.selectedPanels.length === 0)
               }
               className="bg-purple-600 hover:bg-purple-700"
