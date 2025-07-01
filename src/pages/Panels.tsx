@@ -14,6 +14,7 @@ export const Panels: React.FC = () => {
   const [selectedPanel, setSelectedPanel] = useState<any>(null);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionResult, setConnectionResult] = useState<any>(null);
+  const [addingPanel, setAddingPanel] = useState(false);
   const [newPanel, setNewPanel] = useState({
     name: '',
     url: '',
@@ -48,18 +49,27 @@ export const Panels: React.FC = () => {
   };
 
   const handleAddPanel = async () => {
+    if (!connectionResult?.success) {
+      alert('Please test the connection first and ensure it is successful');
+      return;
+    }
+
+    setAddingPanel(true);
     try {
       const panelData = {
         name: newPanel.name,
         url: newPanel.url,
-        subUrl: newPanel.subUrl,
+        subUrl: newPanel.subUrl || null,
         username: newPanel.username,
         password: newPanel.password,
         vpsUsername: newPanel.enableVpsAccess ? newPanel.vpsUsername : null,
         vpsPassword: newPanel.enableVpsAccess ? newPanel.vpsPassword : null
       };
 
+      console.log('Submitting panel data:', panelData);
       await addPanel(panelData);
+      
+      // Reset form and close modal
       setShowAddModal(false);
       setNewPanel({
         name: '',
@@ -72,9 +82,13 @@ export const Panels: React.FC = () => {
         vpsPassword: ''
       });
       setConnectionResult(null);
-    } catch (error) {
+      
+      alert('Panel added successfully!');
+    } catch (error: any) {
       console.error('Failed to add panel:', error);
-      alert('Failed to add panel. Please try again.');
+      alert(`Failed to add panel: ${error.message || 'Unknown error'}`);
+    } finally {
+      setAddingPanel(false);
     }
   };
 
@@ -87,6 +101,7 @@ export const Panels: React.FC = () => {
     if (confirm('Are you sure you want to delete this panel?')) {
       try {
         await deletePanel(panelId);
+        alert('Panel deleted successfully!');
       } catch (error) {
         console.error('Failed to delete panel:', error);
         alert('Failed to delete panel. Please try again.');
@@ -235,7 +250,7 @@ export const Panels: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Panel Name
+                Panel Name *
               </label>
               <input
                 type="text"
@@ -243,12 +258,13 @@ export const Panels: React.FC = () => {
                 onChange={(e) => setNewPanel({...newPanel, name: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 placeholder="Server-01"
+                required
               />
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Panel URL
+                Panel URL *
               </label>
               <input
                 type="url"
@@ -256,6 +272,7 @@ export const Panels: React.FC = () => {
                 onChange={(e) => setNewPanel({...newPanel, url: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 placeholder="http://85.237.211.232:2053/UHAxUEujzMD8UUL/"
+                required
               />
             </div>
           </div>
@@ -276,7 +293,7 @@ export const Panels: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Panel Username
+                Panel Username *
               </label>
               <input
                 type="text"
@@ -284,12 +301,13 @@ export const Panels: React.FC = () => {
                 onChange={(e) => setNewPanel({...newPanel, username: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 placeholder="hmray"
+                required
               />
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Panel Password
+                Panel Password *
               </label>
               <input
                 type="password"
@@ -297,6 +315,7 @@ export const Panels: React.FC = () => {
                 onChange={(e) => setNewPanel({...newPanel, password: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 placeholder="••••••••"
+                required
               />
             </div>
           </div>
@@ -349,7 +368,7 @@ export const Panels: React.FC = () => {
                 </p>
                 {connectionResult.success && connectionResult.data && (
                   <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                    Found {connectionResult.data.inbounds} inbound(s) on the panel
+                    Panel is ready to be added
                   </p>
                 )}
               </div>
@@ -407,10 +426,24 @@ export const Panels: React.FC = () => {
             </Button>
             <Button 
               onClick={handleAddPanel} 
-              disabled={!newPanel.name || !newPanel.url || !newPanel.username || !newPanel.password || !connectionResult?.success}
+              disabled={
+                !newPanel.name || 
+                !newPanel.url || 
+                !newPanel.username || 
+                !newPanel.password || 
+                !connectionResult?.success ||
+                addingPanel
+              }
               className="bg-purple-600 hover:bg-purple-700"
             >
-              Add Panel
+              {addingPanel ? (
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Adding Panel...</span>
+                </div>
+              ) : (
+                'Add Panel'
+              )}
             </Button>
           </div>
         </div>

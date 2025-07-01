@@ -51,21 +51,38 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Create new panel
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { name, url, username, password } = req.body;
+    const { name, url, subUrl, username, password, vpsUsername, vpsPassword } = req.body;
+
+    console.log('Creating panel with data:', { name, url, username, hasPassword: !!password });
 
     if (!name || !url || !username || !password) {
       return res.status(400).json({
         success: false,
-        message: 'All fields are required'
+        message: 'Name, URL, username, and password are required'
+      });
+    }
+
+    // Check if panel with same name or URL already exists
+    const existingPanel = await db.getAsync(
+      'SELECT id FROM panels WHERE name = ? OR url = ?',
+      [name, url]
+    );
+
+    if (existingPanel) {
+      return res.status(400).json({
+        success: false,
+        message: 'Panel with this name or URL already exists'
       });
     }
 
     const result = await db.runAsync(
-      'INSERT INTO panels (name, url, username, password) VALUES (?, ?, ?, ?)',
-      [name, url, username, password]
+      'INSERT INTO panels (name, url, username, password, status) VALUES (?, ?, ?, ?, ?)',
+      [name, url, username, password, 'active']
     );
 
     const newPanel = await db.getAsync('SELECT * FROM panels WHERE id = ?', [result.lastID]);
+
+    console.log('Panel created successfully:', newPanel);
 
     res.status(201).json({
       success: true,
@@ -76,7 +93,7 @@ router.post('/', authenticateToken, async (req, res) => {
     console.error('Create panel error:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: 'Failed to create panel: ' + error.message
     });
   }
 });
@@ -85,7 +102,7 @@ router.post('/', authenticateToken, async (req, res) => {
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, url, username, password, status } = req.body;
+    const { name, url, subUrl, username, password, status } = req.body;
 
     const panel = await db.getAsync('SELECT * FROM panels WHERE id = ?', [id]);
     if (!panel) {
@@ -97,7 +114,14 @@ router.put('/:id', authenticateToken, async (req, res) => {
 
     await db.runAsync(
       'UPDATE panels SET name = ?, url = ?, username = ?, password = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [name || panel.name, url || panel.url, username || panel.username, password || panel.password, status || panel.status, id]
+      [
+        name || panel.name, 
+        url || panel.url, 
+        username || panel.username, 
+        password || panel.password, 
+        status || panel.status, 
+        id
+      ]
     );
 
     const updatedPanel = await db.getAsync('SELECT * FROM panels WHERE id = ?', [id]);

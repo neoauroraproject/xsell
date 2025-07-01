@@ -363,9 +363,16 @@ export const usePanels = () => {
 
   const addPanel = async (panelData: any) => {
     try {
+      console.log('Adding panel with data:', panelData);
       const response = await apiClient.createPanel(panelData);
-      await fetchPanels(); // Refresh the list
-      return response;
+      console.log('Panel creation response:', response);
+      
+      if (response.success) {
+        await fetchPanels(); // Refresh the list
+        return response;
+      } else {
+        throw new Error(response.message || 'Failed to create panel');
+      }
     } catch (error) {
       console.error('Failed to add panel:', error);
       throw error;
