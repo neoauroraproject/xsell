@@ -24,7 +24,7 @@ class ApiClient {
         'Content-Type': 'application/json',
         ...options.headers,
       },
-      credentials: 'include', // Important for cookies
+      credentials: 'include',
       ...options,
     };
 
@@ -123,6 +123,11 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ currentPassword, newPassword }),
     });
+  }
+
+  // Health check
+  async healthCheck() {
+    return this.request('/health');
   }
 
   // Panel endpoints
@@ -259,11 +264,6 @@ class ApiClient {
     return this.request(`/settings/${key}`, {
       method: 'DELETE',
     });
-  }
-
-  // Health check
-  async healthCheck() {
-    return this.request('/health');
   }
 }
 
