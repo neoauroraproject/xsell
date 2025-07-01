@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "X-UI SELL Panel Backend Server",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js"
@@ -13,10 +14,16 @@
     "sqlite3": "^5.1.6",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
-    "dotenv": "^16.3.1"
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.3.1",
+    "axios": "^1.6.0",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "keywords": ["xui", "panel", "management"],
   "author": "Hmray",
