@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # X-UI SELL Installation Script by Hmray
-# Version: 2.0.0
+# Version: 2.0.1
 # Description: Complete installation script with simplified setup option
 
 set -e
@@ -456,9 +456,9 @@ EOF
     print_success "Systemd service created and enabled"
 }
 
-# Function to configure Nginx
-configure_nginx() {
-    print_header "Configuring Nginx..."
+# Function to configure Nginx (HTTP only initially)
+configure_nginx_http() {
+    print_header "Configuring Nginx (HTTP)..."
     
     # Backup existing default config if it exists
     if [[ -f /etc/nginx/sites-enabled/default ]]; then
@@ -466,23 +466,11 @@ configure_nginx() {
         mv /etc/nginx/sites-enabled/default /etc/nginx/sites-enabled/default.backup
     fi
     
-    # Create Nginx configuration
+    # Create initial HTTP-only Nginx configuration
     cat > "$NGINX_CONF" << EOF
 server {
     listen 80;
     server_name $DOMAIN;
-    
-    # Redirect HTTP to HTTPS
-    return 301 https://\$server_name\$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name $DOMAIN;
-    
-    # SSL Configuration (will be updated by certbot)
-    ssl_certificate /etc/ssl/certs/ssl-cert-snakeoil.pem;
-    ssl_certificate_key /etc/ssl/private/ssl-cert-snakeoil.key;
     
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
@@ -532,17 +520,104 @@ EOF
     
     # Test Nginx configuration
     if nginx -t; then
-        print_success "Nginx configuration is valid"
+        print_success "Nginx HTTP configuration is valid"
     else
         print_error "Nginx configuration is invalid"
         exit 1
     fi
     
-    # Restart Nginx
+    # Start Nginx
     systemctl restart nginx
     systemctl enable nginx
     
-    print_success "Nginx configured and restarted"
+    print_success "Nginx HTTP configuration completed"
+}
+
+# Function to configure Nginx with SSL
+configure_nginx_ssl() {
+    print_header "Configuring Nginx with SSL..."
+    
+    # Create HTTPS configuration
+    cat > "$NGINX_CONF" << EOF
+server {
+    listen 80;
+    server_name $DOMAIN;
+    
+    # Redirect HTTP to HTTPS
+    return 301 https://\$server_name\$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name $DOMAIN;
+    
+    # SSL Configuration
+    ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
+    
+    # SSL Security Settings
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer-when-downgrade" always;
+    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    
+    # Frontend (React app)
+    location / {
+        root $XSELL_DIR/dist;
+        try_files \$uri \$uri/ /index.html;
+        
+        # Cache static assets
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+    }
+    
+    # API proxy
+    location /api/ {
+        proxy_pass http://localhost:$API_PORT;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+    
+    # Logs
+    access_log /var/log/nginx/xsell_access.log;
+    error_log /var/log/nginx/xsell_error.log;
+}
+EOF
+    
+    # Test Nginx configuration
+    if nginx -t; then
+        print_success "Nginx SSL configuration is valid"
+        systemctl reload nginx
+    else
+        print_error "Nginx SSL configuration is invalid"
+        exit 1
+    fi
+    
+    print_success "Nginx SSL configuration completed"
 }
 
 # Function to configure firewall
@@ -581,41 +656,44 @@ install_ssl() {
     if [[ "$INSTALL_SSL" == "y" ]]; then
         print_header "Installing SSL Certificate..."
         
-        # Stop nginx temporarily
-        systemctl stop nginx
+        # Make sure Nginx is running with HTTP config first
+        print_status "Ensuring Nginx is running with HTTP configuration..."
+        systemctl restart nginx
         
-        # Get certificate
+        # Wait a moment for Nginx to start
+        sleep 3
+        
+        # Get certificate using webroot method
         print_status "Obtaining SSL certificate from Let's Encrypt..."
-        if certbot certonly --standalone -d "$DOMAIN" --email "$SSL_EMAIL" --agree-tos --non-interactive; then
-            print_success "SSL certificate obtained successfully"
-            
-            # Update Nginx configuration with real certificate paths
-            sed -i "s|ssl_certificate .*|ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;|" "$NGINX_CONF"
-            sed -i "s|ssl_certificate_key .*|ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;|" "$NGINX_CONF"
-            
-            # Add SSL security settings
-            cat >> "$NGINX_CONF" << EOF
-
-    # SSL Security Settings
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384;
-    ssl_prefer_server_ciphers off;
-    ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 10m;
-    ssl_stapling on;
-    ssl_stapling_verify on;
-EOF
+        if certbot --nginx -d "$DOMAIN" --email "$SSL_EMAIL" --agree-tos --non-interactive --redirect; then
+            print_success "SSL certificate obtained and configured successfully"
             
             # Setup auto-renewal
             (crontab -l 2>/dev/null; echo "0 12 * * * /usr/bin/certbot renew --quiet") | crontab -
+            print_success "SSL auto-renewal configured"
             
         else
-            print_error "Failed to obtain SSL certificate"
-            print_warning "Continuing with self-signed certificate"
+            print_warning "Failed to obtain SSL certificate automatically"
+            print_status "Trying alternative method..."
+            
+            # Try standalone method as fallback
+            systemctl stop nginx
+            if certbot certonly --standalone -d "$DOMAIN" --email "$SSL_EMAIL" --agree-tos --non-interactive; then
+                print_success "SSL certificate obtained successfully"
+                configure_nginx_ssl
+                systemctl start nginx
+                
+                # Setup auto-renewal
+                (crontab -l 2>/dev/null; echo "0 12 * * * /usr/bin/certbot renew --quiet") | crontab -
+                print_success "SSL auto-renewal configured"
+            else
+                print_error "Failed to obtain SSL certificate"
+                print_warning "Continuing with HTTP configuration"
+                systemctl start nginx
+            fi
         fi
-        
-        # Start nginx
-        systemctl start nginx
+    else
+        print_status "Skipping SSL certificate installation"
     fi
 }
 
@@ -652,7 +730,7 @@ start_services() {
         exit 1
     fi
     
-    # Restart Nginx to ensure everything is working
+    # Ensure Nginx is running
     systemctl restart nginx
     
     print_success "All services started successfully"
@@ -667,11 +745,18 @@ display_final_info() {
     echo
     echo "Access Information:"
     echo "=================="
-    if [[ "$INSTALL_SSL" == "y" ]]; then
+    
+    # Check if SSL is actually working
+    if [[ "$INSTALL_SSL" == "y" ]] && [[ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]]; then
         echo "Panel URL: https://$DOMAIN"
+        print_success "SSL certificate is installed and active"
     else
         echo "Panel URL: http://$DOMAIN"
+        if [[ "$INSTALL_SSL" == "y" ]]; then
+            print_warning "SSL was requested but may not be fully configured"
+        fi
     fi
+    
     echo "Admin Username: $ADMIN_USERNAME"
     echo "Admin Password: [hidden]"
     echo
@@ -691,7 +776,7 @@ display_final_info() {
     echo "Nginx config:    $NGINX_CONF"
     echo "Install log:     $LOG_FILE"
     echo
-    if [[ "$INSTALL_SSL" == "y" ]]; then
+    if [[ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]]; then
         echo "SSL Certificate: /etc/letsencrypt/live/$DOMAIN/"
         echo "Auto-renewal:    Configured via crontab"
         echo
@@ -708,7 +793,7 @@ show_menu() {
     clear
     print_header "╔══════════════════════════════════════════════════════════════╗"
     print_header "║                    X-UI SELL Installer                      ║"
-    print_header "║              Professional X-UI Management v2.0.0            ║"
+    print_header "║              Professional X-UI Management v2.0.1            ║"
     print_header "║                  Design by Hmray                            ║"
     print_header "╚══════════════════════════════════════════════════════════════╝"
     echo
@@ -723,7 +808,8 @@ show_menu() {
     echo "7) 📊 View Service Status"
     echo "8) 📋 View Logs"
     echo "9) ⚙️ Advanced Installation (Full Configuration)"
-    echo "10) ❌ Exit"
+    echo "10) 🔧 Fix SSL Certificate"
+    echo "11) ❌ Exit"
     echo
 }
 
@@ -906,6 +992,28 @@ view_logs() {
     journalctl -u "$SERVICE_NAME" -f
 }
 
+# Function to fix SSL certificate
+fix_ssl() {
+    print_header "Fixing SSL Certificate..."
+    
+    read -p "Enter your domain name: " DOMAIN
+    read -p "Enter email for SSL certificate: " SSL_EMAIL
+    
+    if [[ -z "$DOMAIN" || -z "$SSL_EMAIL" ]]; then
+        print_error "Domain and email are required"
+        return 1
+    fi
+    
+    # First configure HTTP-only Nginx
+    configure_nginx_http
+    
+    # Then install SSL
+    INSTALL_SSL="y"
+    install_ssl
+    
+    print_success "SSL certificate fix completed!"
+}
+
 # Main installation function (Quick Setup)
 main_install_quick() {
     print_header "Starting Quick Installation..."
@@ -923,9 +1031,9 @@ main_install_quick() {
     install_xsell
     create_env_file
     create_systemd_service
-    configure_nginx
+    configure_nginx_http  # Start with HTTP only
     configure_firewall
-    install_ssl
+    install_ssl           # Then add SSL if requested
     initialize_database
     start_services
     display_final_info
@@ -950,9 +1058,9 @@ main_install_advanced() {
     install_xsell
     create_env_file
     create_systemd_service
-    configure_nginx
+    configure_nginx_http  # Start with HTTP only
     configure_firewall
-    install_ssl
+    install_ssl           # Then add SSL if requested
     initialize_database
     start_services
     display_final_info
@@ -964,7 +1072,7 @@ main_install_advanced() {
 main() {
     while true; do
         show_menu
-        read -p "Enter your choice [1-10]: " choice
+        read -p "Enter your choice [1-11]: " choice
         case $choice in
             1)
                 main_install_quick
@@ -1006,6 +1114,11 @@ main() {
                 read -p "Press Enter to continue..."
                 ;;
             10)
+                check_root
+                fix_ssl
+                read -p "Press Enter to continue..."
+                ;;
+            11)
                 print_status "Goodbye!"
                 echo
                 print_header "Copyright © 2025 Design and developed by Hmray"
