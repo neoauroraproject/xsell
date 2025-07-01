@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # X-UI SELL Installation Script by Hmray
-# Version: 2.0.2
-# Description: Complete installation script with proper SSL handling
+# Version: 2.0.3
+# Description: Complete installation script with port conflict resolution
 
 set -e
 
@@ -85,6 +85,47 @@ ssl_cert_exists() {
     [[ -f "/etc/letsencrypt/live/$domain/fullchain.pem" && -f "/etc/letsencrypt/live/$domain/privkey.pem" ]]
 }
 
+# Function to kill processes on port
+kill_port_processes() {
+    local port="$1"
+    print_status "Checking for processes using port $port..."
+    
+    # Find and kill processes using the port
+    local pids=$(lsof -ti:$port 2>/dev/null || true)
+    if [[ -n "$pids" ]]; then
+        print_warning "Found processes using port $port: $pids"
+        echo "$pids" | xargs -r kill -9
+        print_success "Killed processes on port $port"
+        sleep 2
+    else
+        print_status "No processes found using port $port"
+    fi
+}
+
+# Function to stop existing services
+stop_existing_services() {
+    print_status "Stopping existing services..."
+    
+    # Stop any existing xsell service
+    if systemctl is-active --quiet xsell; then
+        print_status "Stopping xsell service..."
+        systemctl stop xsell
+    fi
+    
+    # Stop any existing walpanel service (old name)
+    if systemctl is-active --quiet walpanel; then
+        print_status "Stopping old walpanel service..."
+        systemctl stop walpanel
+        systemctl disable walpanel 2>/dev/null || true
+    fi
+    
+    # Kill processes on common ports
+    kill_port_processes 3001
+    kill_port_processes 3000
+    
+    print_success "Existing services stopped"
+}
+
 # Function to install dependencies based on OS
 install_dependencies() {
     print_header "Installing Dependencies..."
@@ -96,7 +137,7 @@ install_dependencies() {
         
         # Install required packages
         print_status "Installing required packages..."
-        apt-get install -y curl wget git nginx certbot python3-certbot-nginx ufw sqlite3 unzip
+        apt-get install -y curl wget git nginx certbot python3-certbot-nginx ufw sqlite3 unzip lsof
         
         # Install Node.js 18.x
         if ! command_exists node; then
@@ -117,7 +158,7 @@ install_dependencies() {
         
         # Install required packages
         print_status "Installing required packages..."
-        yum install -y curl wget git nginx certbot python3-certbot-nginx firewalld sqlite unzip
+        yum install -y curl wget git nginx certbot python3-certbot-nginx firewalld sqlite unzip lsof
         
         # Install Node.js 18.x
         if ! command_exists node; then
@@ -430,10 +471,14 @@ EOF
 create_systemd_service() {
     print_status "Creating systemd service..."
     
+    # Remove old service files
+    rm -f "/etc/systemd/system/walpanel.service"
+    
     cat > "/etc/systemd/system/$SERVICE_NAME.service" << EOF
 [Unit]
 Description=X-UI SELL Panel Management System by Hmray
 After=network.target
+Wants=network-online.target
 
 [Service]
 Type=simple
@@ -450,6 +495,11 @@ NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths=$XSELL_DIR
+
+# Process management
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
 
 [Install]
 WantedBy=multi-user.target
@@ -765,9 +815,15 @@ initialize_database() {
 start_services() {
     print_header "Starting Services..."
     
+    # Stop any existing services first
+    stop_existing_services
+    
     # Start X-UI SELL Panel service
     print_status "Starting X-UI SELL Panel service..."
     systemctl start "$SERVICE_NAME"
+    
+    # Wait a moment for service to start
+    sleep 5
     
     # Check service status
     if systemctl is-active --quiet "$SERVICE_NAME"; then
@@ -776,7 +832,18 @@ start_services() {
         print_error "Failed to start X-UI SELL Panel service"
         print_status "Checking service logs..."
         journalctl -u "$SERVICE_NAME" --no-pager -n 20
-        exit 1
+        
+        # Try to restart once more
+        print_status "Attempting to restart service..."
+        systemctl restart "$SERVICE_NAME"
+        sleep 5
+        
+        if systemctl is-active --quiet "$SERVICE_NAME"; then
+            print_success "X-UI SELL Panel service restarted successfully"
+        else
+            print_error "Service still not running. Please check logs manually."
+            exit 1
+        fi
     fi
     
     # Ensure Nginx is running
@@ -843,7 +910,7 @@ show_menu() {
     clear
     print_header "╔══════════════════════════════════════════════════════════════╗"
     print_header "║                    X-UI SELL Installer                      ║"
-    print_header "║              Professional X-UI Management v2.0.2            ║"
+    print_header "║              Professional X-UI Management v2.0.3            ║"
     print_header "║                  Design by Hmray                            ║"
     print_header "╚══════════════════════════════════════════════════════════════╝"
     echo
@@ -859,7 +926,8 @@ show_menu() {
     echo "8) 📋 View Logs"
     echo "9) ⚙️ Advanced Installation (Full Configuration)"
     echo "10) 🔧 Fix SSL Certificate"
-    echo "11) ❌ Exit"
+    echo "11) 🔄 Restart Services"
+    echo "12) ❌ Exit"
     echo
 }
 
@@ -1032,6 +1100,10 @@ view_service_status() {
     
     echo
     systemctl status "$SERVICE_NAME" --no-pager
+    
+    echo
+    print_status "Port usage:"
+    netstat -tlnp | grep -E ':(3000|3001)' || echo "No processes found on ports 3000/3001"
 }
 
 # Function to view logs
@@ -1064,6 +1136,34 @@ fix_ssl() {
     print_success "SSL certificate fix completed!"
 }
 
+# Function to restart services
+restart_services() {
+    print_header "Restarting Services..."
+    
+    stop_existing_services
+    
+    print_status "Starting X-UI SELL Panel service..."
+    systemctl start "$SERVICE_NAME"
+    
+    print_status "Restarting Nginx..."
+    systemctl restart nginx
+    
+    sleep 5
+    
+    if systemctl is-active --quiet "$SERVICE_NAME"; then
+        print_success "X-UI SELL Panel service is running"
+    else
+        print_error "X-UI SELL Panel service failed to start"
+        journalctl -u "$SERVICE_NAME" --no-pager -n 10
+    fi
+    
+    if systemctl is-active --quiet nginx; then
+        print_success "Nginx is running"
+    else
+        print_error "Nginx failed to start"
+    fi
+}
+
 # Main installation function (Quick Setup)
 main_install_quick() {
     print_header "Starting Quick Installation..."
@@ -1076,6 +1176,7 @@ main_install_quick() {
     check_root
     detect_os
     get_simple_user_input
+    stop_existing_services
     install_dependencies
     create_user
     install_xsell
@@ -1103,6 +1204,7 @@ main_install_advanced() {
     check_root
     detect_os
     get_full_user_input
+    stop_existing_services
     install_dependencies
     create_user
     install_xsell
@@ -1122,7 +1224,7 @@ main_install_advanced() {
 main() {
     while true; do
         show_menu
-        read -p "Enter your choice [1-11]: " choice
+        read -p "Enter your choice [1-12]: " choice
         case $choice in
             1)
                 main_install_quick
@@ -1169,6 +1271,11 @@ main() {
                 read -p "Press Enter to continue..."
                 ;;
             11)
+                check_root
+                restart_services
+                read -p "Press Enter to continue..."
+                ;;
+            12)
                 print_status "Goodbye!"
                 echo
                 print_header "Copyright © 2025 Design and developed by Hmray"
