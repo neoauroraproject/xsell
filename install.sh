@@ -17,11 +17,11 @@ WHITE='\033[1;37m'
 NC='\033[0m' # No Color
 
 # Configuration variables
-WALPANEL_DIR="/opt/walpanel"
-SERVICE_NAME="walpanel"
-NGINX_CONF="/etc/nginx/sites-available/walpanel"
-NGINX_ENABLED="/etc/nginx/sites-enabled/walpanel"
-LOG_FILE="/var/log/walpanel-install.log"
+XSELL_DIR="/opt/xsell"
+SERVICE_NAME="xsell"
+NGINX_CONF="/etc/nginx/sites-available/xsell"
+NGINX_ENABLED="/etc/nginx/sites-enabled/xsell"
+LOG_FILE="/var/log/xsell-install.log"
 GITHUB_REPO="https://github.com/neoauroraproject/xsell"
 TEMP_DIR="/tmp/xsell-install"
 
@@ -248,20 +248,20 @@ get_user_input() {
     fi
 }
 
-# Function to create walpanel user
+# Function to create xsell user
 create_user() {
-    print_status "Creating walpanel user..."
+    print_status "Creating xsell user..."
     
-    if ! id "walpanel" &>/dev/null; then
-        useradd -r -s /bin/false -d "$WALPANEL_DIR" walpanel
-        print_success "User 'walpanel' created"
+    if ! id "xsell" &>/dev/null; then
+        useradd -r -s /bin/false -d "$XSELL_DIR" xsell
+        print_success "User 'xsell' created"
     else
-        print_warning "User 'walpanel' already exists"
+        print_warning "User 'xsell' already exists"
     fi
 }
 
 # Function to download and install X-UI SELL Panel
-install_walpanel() {
+install_xsell() {
     print_header "Installing X-UI SELL Panel by Hmray..."
     
     # Create temporary directory
@@ -291,12 +291,12 @@ install_walpanel() {
     
     # Create installation directory
     print_status "Creating installation directory..."
-    mkdir -p "$WALPANEL_DIR"
+    mkdir -p "$XSELL_DIR"
     
     # Copy server directory and its contents
     print_status "Copying server files..."
     if [[ -d "server" ]]; then
-        cp -r server "$WALPANEL_DIR/"
+        cp -r server "$XSELL_DIR/"
         print_success "Server files copied"
     else
         print_error "Server directory not found in downloaded files"
@@ -307,18 +307,18 @@ install_walpanel() {
     print_status "Copying frontend source files..."
     if [[ -d "src" ]] && [[ -f "package.json" ]]; then
         # Copy all frontend related files
-        cp -r src "$WALPANEL_DIR/"
-        [[ -d "public" ]] && cp -r public "$WALPANEL_DIR/"
-        cp package.json "$WALPANEL_DIR/"
-        [[ -f "package-lock.json" ]] && cp package-lock.json "$WALPANEL_DIR/"
-        [[ -f "vite.config.ts" ]] && cp vite.config.ts "$WALPANEL_DIR/"
-        [[ -f "tsconfig.json" ]] && cp tsconfig.json "$WALPANEL_DIR/"
-        [[ -f "tsconfig.app.json" ]] && cp tsconfig.app.json "$WALPANEL_DIR/"
-        [[ -f "tsconfig.node.json" ]] && cp tsconfig.node.json "$WALPANEL_DIR/"
-        [[ -f "tailwind.config.js" ]] && cp tailwind.config.js "$WALPANEL_DIR/"
-        [[ -f "postcss.config.js" ]] && cp postcss.config.js "$WALPANEL_DIR/"
-        [[ -f "eslint.config.js" ]] && cp eslint.config.js "$WALPANEL_DIR/"
-        [[ -f "index.html" ]] && cp index.html "$WALPANEL_DIR/"
+        cp -r src "$XSELL_DIR/"
+        [[ -d "public" ]] && cp -r public "$XSELL_DIR/"
+        cp package.json "$XSELL_DIR/"
+        [[ -f "package-lock.json" ]] && cp package-lock.json "$XSELL_DIR/"
+        [[ -f "vite.config.ts" ]] && cp vite.config.ts "$XSELL_DIR/"
+        [[ -f "tsconfig.json" ]] && cp tsconfig.json "$XSELL_DIR/"
+        [[ -f "tsconfig.app.json" ]] && cp tsconfig.app.json "$XSELL_DIR/"
+        [[ -f "tsconfig.node.json" ]] && cp tsconfig.node.json "$XSELL_DIR/"
+        [[ -f "tailwind.config.js" ]] && cp tailwind.config.js "$XSELL_DIR/"
+        [[ -f "postcss.config.js" ]] && cp postcss.config.js "$XSELL_DIR/"
+        [[ -f "eslint.config.js" ]] && cp eslint.config.js "$XSELL_DIR/"
+        [[ -f "index.html" ]] && cp index.html "$XSELL_DIR/"
         print_success "Frontend files copied"
     else
         print_error "Frontend files not found in downloaded files"
@@ -327,7 +327,7 @@ install_walpanel() {
     
     # Install backend dependencies
     print_status "Installing backend dependencies..."
-    cd "$WALPANEL_DIR/server"
+    cd "$XSELL_DIR/server"
     npm install || {
         print_error "Failed to install backend dependencies"
         exit 1
@@ -336,7 +336,7 @@ install_walpanel() {
     
     # Install frontend dependencies and build
     print_status "Installing frontend dependencies..."
-    cd "$WALPANEL_DIR"
+    cd "$XSELL_DIR"
     npm install || {
         print_error "Failed to install frontend dependencies"
         exit 1
@@ -350,8 +350,8 @@ install_walpanel() {
     print_success "Frontend built successfully"
     
     # Set permissions
-    chown -R walpanel:walpanel "$WALPANEL_DIR"
-    chmod -R 755 "$WALPANEL_DIR"
+    chown -R xsell:xsell "$XSELL_DIR"
+    chmod -R 755 "$XSELL_DIR"
     
     # Clean up temporary directory
     print_status "Cleaning up temporary files..."
@@ -367,14 +367,14 @@ create_env_file() {
     # Generate JWT secret
     JWT_SECRET=$(openssl rand -base64 32)
     
-    cat > "$WALPANEL_DIR/.env" << EOF
+    cat > "$XSELL_DIR/.env" << EOF
 # X-UI SELL Panel Configuration by Hmray
 NODE_ENV=production
 PORT=$API_PORT
 FRONTEND_PORT=$PANEL_PORT
 
 # Database
-DB_PATH=$WALPANEL_DIR/server/database.sqlite
+DB_PATH=$XSELL_DIR/server/database.sqlite
 
 # JWT Configuration
 JWT_SECRET=$JWT_SECRET
@@ -390,8 +390,8 @@ PANEL_URL=https://$DOMAIN
 EOF
     
     # Set permissions
-    chown walpanel:walpanel "$WALPANEL_DIR/.env"
-    chmod 600 "$WALPANEL_DIR/.env"
+    chown xsell:xsell "$XSELL_DIR/.env"
+    chmod 600 "$XSELL_DIR/.env"
     
     print_success "Environment file created"
 }
@@ -407,19 +407,19 @@ After=network.target
 
 [Service]
 Type=simple
-User=walpanel
-WorkingDirectory=$WALPANEL_DIR/server
+User=xsell
+WorkingDirectory=$XSELL_DIR/server
 ExecStart=/usr/bin/node index.js
 Restart=always
 RestartSec=10
 Environment=NODE_ENV=production
-EnvironmentFile=$WALPANEL_DIR/.env
+EnvironmentFile=$XSELL_DIR/.env
 
 # Security settings
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=$WALPANEL_DIR
+ReadWritePaths=$XSELL_DIR
 
 [Install]
 WantedBy=multi-user.target
@@ -442,8 +442,8 @@ create_self_signed_cert() {
     
     # Generate self-signed certificate
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-        -keyout /etc/ssl/private/walpanel-selfsigned.key \
-        -out /etc/ssl/certs/walpanel-selfsigned.crt \
+        -keyout /etc/ssl/private/xsell-selfsigned.key \
+        -out /etc/ssl/certs/xsell-selfsigned.crt \
         -subj "/C=US/ST=State/L=City/O=Organization/OU=OrgUnit/CN=$DOMAIN"
     
     print_success "Self-signed certificate created"
@@ -486,8 +486,8 @@ server {
     server_name $DOMAIN;
     
     # SSL Configuration (self-signed initially)
-    ssl_certificate /etc/ssl/certs/walpanel-selfsigned.crt;
-    ssl_certificate_key /etc/ssl/private/walpanel-selfsigned.key;
+    ssl_certificate /etc/ssl/certs/xsell-selfsigned.crt;
+    ssl_certificate_key /etc/ssl/private/xsell-selfsigned.key;
     
     # SSL Security Settings
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -505,7 +505,7 @@ server {
     
     # Frontend (React app)
     location / {
-        root $WALPANEL_DIR/dist;
+        root $XSELL_DIR/dist;
         try_files \$uri \$uri/ /index.html;
         
         # Cache static assets
@@ -534,8 +534,8 @@ server {
     }
     
     # Logs
-    access_log /var/log/nginx/walpanel_access.log;
-    error_log /var/log/nginx/walpanel_error.log;
+    access_log /var/log/nginx/xsell_access.log;
+    error_log /var/log/nginx/xsell_error.log;
 }
 EOF
     
@@ -636,7 +636,7 @@ install_ssl() {
 initialize_database() {
     print_status "Initializing database..."
     
-    cd "$WALPANEL_DIR/server"
+    cd "$XSELL_DIR/server"
     
     # Run database migration
     if node scripts/migrate.js; then
@@ -701,9 +701,9 @@ display_final_info() {
     echo
     echo "File Locations:"
     echo "==============="
-    echo "Installation:    $WALPANEL_DIR"
-    echo "Configuration:   $WALPANEL_DIR/.env"
-    echo "Database:        $WALPANEL_DIR/server/database.sqlite"
+    echo "Installation:    $XSELL_DIR"
+    echo "Configuration:   $XSELL_DIR/.env"
+    echo "Database:        $XSELL_DIR/server/database.sqlite"
     echo "Nginx config:    $NGINX_CONF"
     echo "Install log:     $LOG_FILE"
     echo
@@ -751,10 +751,10 @@ install_dependencies_only() {
 }
 
 # Function to update X-UI SELL Panel
-update_walpanel() {
+update_xsell() {
     print_header "Updating X-UI SELL Panel..."
     
-    if [[ ! -d "$WALPANEL_DIR" ]]; then
+    if [[ ! -d "$XSELL_DIR" ]]; then
         print_error "X-UI SELL Panel is not installed"
         return 1
     fi
@@ -765,7 +765,7 @@ update_walpanel() {
     
     # Backup current installation
     print_status "Creating backup..."
-    cp -r "$WALPANEL_DIR" "$WALPANEL_DIR.backup.$(date +%Y%m%d_%H%M%S)"
+    cp -r "$XSELL_DIR" "$XSELL_DIR.backup.$(date +%Y%m%d_%H%M%S)"
     
     # Download and update
     print_status "Downloading latest version..."
@@ -784,14 +784,14 @@ update_walpanel() {
     
     # Update files
     print_status "Updating X-UI SELL Panel..."
-    [[ -d "server" ]] && cp -r server/* "$WALPANEL_DIR/server/"
-    [[ -d "src" ]] && cp -r src "$WALPANEL_DIR/"
-    [[ -f "package.json" ]] && cp package.json "$WALPANEL_DIR/"
+    [[ -d "server" ]] && cp -r server/* "$XSELL_DIR/server/"
+    [[ -d "src" ]] && cp -r src "$XSELL_DIR/"
+    [[ -f "package.json" ]] && cp package.json "$XSELL_DIR/"
     
-    cd "$WALPANEL_DIR/server"
+    cd "$XSELL_DIR/server"
     npm update
     
-    cd "$WALPANEL_DIR"
+    cd "$XSELL_DIR"
     npm update
     npm run build
     
@@ -806,7 +806,7 @@ update_walpanel() {
 }
 
 # Function to uninstall X-UI SELL Panel
-uninstall_walpanel() {
+uninstall_xsell() {
     print_header "Uninstalling X-UI SELL Panel..."
     
     read -p "Are you sure you want to uninstall X-UI SELL Panel? This will remove all data! (y/N): " confirm
@@ -828,10 +828,10 @@ uninstall_walpanel() {
     systemctl restart nginx
     
     # Remove installation directory
-    rm -rf "$WALPANEL_DIR"
+    rm -rf "$XSELL_DIR"
     
     # Remove user
-    userdel walpanel 2>/dev/null || true
+    userdel xsell 2>/dev/null || true
     
     # Remove SSL certificate (optional)
     read -p "Do you want to remove SSL certificates? (y/N): " remove_ssl
@@ -843,30 +843,30 @@ uninstall_walpanel() {
 }
 
 # Function to backup X-UI SELL Panel
-backup_walpanel() {
+backup_xsell() {
     print_header "Backing up X-UI SELL Panel..."
     
-    if [[ ! -d "$WALPANEL_DIR" ]]; then
+    if [[ ! -d "$XSELL_DIR" ]]; then
         print_error "X-UI SELL Panel is not installed"
         return 1
     fi
     
-    BACKUP_DIR="/opt/walpanel-backups"
-    BACKUP_FILE="$BACKUP_DIR/walpanel-backup-$(date +%Y%m%d_%H%M%S).tar.gz"
+    BACKUP_DIR="/opt/xsell-backups"
+    BACKUP_FILE="$BACKUP_DIR/xsell-backup-$(date +%Y%m%d_%H%M%S).tar.gz"
     
     mkdir -p "$BACKUP_DIR"
     
     print_status "Creating backup archive..."
-    tar -czf "$BACKUP_FILE" -C "$(dirname "$WALPANEL_DIR")" "$(basename "$WALPANEL_DIR")"
+    tar -czf "$BACKUP_FILE" -C "$(dirname "$XSELL_DIR")" "$(basename "$XSELL_DIR")"
     
     print_success "Backup created: $BACKUP_FILE"
 }
 
 # Function to restore X-UI SELL Panel
-restore_walpanel() {
+restore_xsell() {
     print_header "Restoring X-UI SELL Panel..."
     
-    BACKUP_DIR="/opt/walpanel-backups"
+    BACKUP_DIR="/opt/xsell-backups"
     
     if [[ ! -d "$BACKUP_DIR" ]]; then
         print_error "No backups found"
@@ -891,7 +891,7 @@ restore_walpanel() {
     
     # Restore backup
     print_status "Restoring from backup..."
-    tar -xzf "$backup_file" -C "$(dirname "$WALPANEL_DIR")"
+    tar -xzf "$backup_file" -C "$(dirname "$XSELL_DIR")"
     
     # Start service
     systemctl start "$SERVICE_NAME"
@@ -952,7 +952,7 @@ main_install() {
     get_user_input
     install_dependencies
     create_user
-    install_walpanel
+    install_xsell
     create_env_file
     create_systemd_service
     configure_nginx
@@ -982,21 +982,21 @@ main() {
                     ;;
                 3)
                     check_root
-                    update_walpanel
+                    update_xsell
                     read -p "Press Enter to continue..."
                     ;;
                 4)
                     check_root
-                    uninstall_walpanel
+                    uninstall_xsell
                     read -p "Press Enter to continue..."
                     ;;
                 5)
-                    backup_walpanel
+                    backup_xsell
                     read -p "Press Enter to continue..."
                     ;;
                 6)
                     check_root
-                    restore_walpanel
+                    restore_xsell
                     read -p "Press Enter to continue..."
                     ;;
                 7)

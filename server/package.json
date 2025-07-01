@@ -1,7 +1,7 @@
 {
-  "name": "walpanel-server",
+  "name": "xsell-server",
   "version": "1.0.0",
-  "description": "WalPanel Backend Server for X-UI Management",
+  "description": "X-UI SELL Panel Backend Server for X-UI Management",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -17,7 +17,7 @@
     "vpn",
     "proxy"
   ],
-  "author": "WalPanel Team",
+  "author": "X-UI SELL Panel Team",
   "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",

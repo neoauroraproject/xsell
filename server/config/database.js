@@ -91,7 +91,7 @@ export async function initDatabase() {
       const hashedPassword = await bcrypt.default.hash('admin123', 10);
       await db.runAsync(
         'INSERT INTO admins (username, email, password, role) VALUES (?, ?, ?, ?)',
-        ['admin', 'admin@walpanel.com', hashedPassword, 'super_admin']
+        ['admin', 'admin@xsell.com', hashedPassword, 'super_admin']
       );
       console.log('✅ Default admin created: username=admin, password=admin123');
     } else {
@@ -100,7 +100,7 @@ export async function initDatabase() {
 
     // Insert default settings
     const defaultSettings = [
-      { key: 'app_name', value: 'WalPanel', description: 'Application name' },
+      { key: 'app_name', value: 'X-UI SELL Panel', description: 'Application name' },
       { key: 'app_version', value: '1.0.0', description: 'Application version' },
       { key: 'max_panels', value: '10', description: 'Maximum number of panels' },
       { key: 'auto_backup', value: 'true', description: 'Enable automatic backups' }

@@ -97,7 +97,7 @@ app.use('/api/xui', xuiRoutes);
 app.get('/api/health', (req, res) => {
   res.json({ 
     success: true,
-    message: 'Server is running',
+    message: 'X-UI SELL Panel Server is running',
     timestamp: new Date().toISOString(),
     version: '1.0.0',
     cors: 'enabled'
@@ -108,7 +108,7 @@ app.get('/api/health', (req, res) => {
 app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: 'WalPanel API Server',
+    message: 'X-UI SELL Panel API Server',
     version: '1.0.0',
     endpoints: [
       '/api/health',
@@ -146,12 +146,12 @@ app.use('*', (req, res) => {
 // Initialize database and start server
 async function startServer() {
   try {
-    console.log('🚀 Starting WalPanel Server...');
+    console.log('🚀 Starting X-UI SELL Panel Server...');
     await initDatabase();
     console.log('✅ Database initialized successfully');
     
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 WalPanel Server running on port ${PORT}`);
+      console.log(`🚀 X-UI SELL Panel Server running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
       console.log(`📝 API Base URL: http://localhost:${PORT}/api`);

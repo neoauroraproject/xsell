@@ -137,27 +137,27 @@ After installation, access your panel at:
 ### Systemd Commands
 ```bash
 # Start X-UI SELL Panel
-sudo systemctl start walpanel
+sudo systemctl start xsell
 
 # Stop X-UI SELL Panel
-sudo systemctl stop walpanel
+sudo systemctl stop xsell
 
 # Restart X-UI SELL Panel
-sudo systemctl restart walpanel
+sudo systemctl restart xsell
 
 # Check status
-sudo systemctl status walpanel
+sudo systemctl status xsell
 
 # Enable auto-start on boot
-sudo systemctl enable walpanel
+sudo systemctl enable xsell
 
 # View real-time logs
-sudo journalctl -u walpanel -f
+sudo journalctl -u xsell -f
 ```
 
 ### File Locations
 ```
-📁 Installation Directory: /opt/walpanel/
+📁 Installation Directory: /opt/xsell/
 ├── 📄 .env                    # Environment configuration
 ├── 📁 server/                 # Backend server files
 │   ├── 📄 package.json       # Backend dependencies
@@ -171,9 +171,9 @@ sudo journalctl -u walpanel -f
 └── 📄 package.json          # Frontend dependencies
 
 📁 System Files:
-├── 📄 /etc/systemd/system/walpanel.service    # Service file
-├── 📄 /etc/nginx/sites-available/walpanel     # Nginx config
-├── 📄 /var/log/walpanel-install.log          # Install log
+├── 📄 /etc/systemd/system/xsell.service    # Service file
+├── 📄 /etc/nginx/sites-available/xsell     # Nginx config
+├── 📄 /var/log/xsell-install.log          # Install log
 └── 📁 /etc/letsencrypt/live/your-domain/      # SSL certificates
 ```
 
@@ -235,7 +235,7 @@ DELETE /api/settings/:key        # Delete setting
 ## 🛠️ Advanced Configuration
 
 ### Environment Variables
-Edit `/opt/walpanel/.env` to customize:
+Edit `/opt/xsell/.env` to customize:
 
 ```bash
 # Server Configuration
@@ -244,7 +244,7 @@ PORT=3001
 FRONTEND_PORT=3000
 
 # Database
-DB_PATH=/opt/walpanel/server/database.sqlite
+DB_PATH=/opt/xsell/server/database.sqlite
 
 # JWT Configuration
 JWT_SECRET=your-secret-key
@@ -256,7 +256,7 @@ PANEL_URL=https://your-domain.com
 ```
 
 ### Nginx Configuration
-Custom Nginx settings in `/etc/nginx/sites-available/walpanel`:
+Custom Nginx settings in `/etc/nginx/sites-available/xsell`:
 
 ```nginx
 # Custom rate limiting
@@ -289,21 +289,21 @@ sudo ./install.sh
 ### Manual Database Backup
 ```bash
 # Backup database
-sudo cp /opt/walpanel/server/database.sqlite /opt/walpanel/server/database.backup.$(date +%Y%m%d_%H%M%S).sqlite
+sudo cp /opt/xsell/server/database.sqlite /opt/xsell/server/database.backup.$(date +%Y%m%d_%H%M%S).sqlite
 
 # Restore database
-sudo systemctl stop walpanel
-sudo cp /opt/walpanel/server/database.backup.YYYYMMDD_HHMMSS.sqlite /opt/walpanel/server/database.sqlite
-sudo systemctl start walpanel
+sudo systemctl stop xsell
+sudo cp /opt/xsell/server/database.backup.YYYYMMDD_HHMMSS.sqlite /opt/xsell/server/database.sqlite
+sudo systemctl start xsell
 ```
 
 ### Configuration Backup
 ```bash
 # Backup configuration
-sudo tar -czf walpanel-config-$(date +%Y%m%d_%H%M%S).tar.gz -C /opt/walpanel .env
+sudo tar -czf xsell-config-$(date +%Y%m%d_%H%M%S).tar.gz -C /opt/xsell .env
 
 # Backup entire installation
-sudo tar -czf walpanel-full-$(date +%Y%m%d_%H%M%S).tar.gz -C /opt walpanel
+sudo tar -czf xsell-full-$(date +%Y%m%d_%H%M%S).tar.gz -C /opt xsell
 ```
 
 ## 🔄 Updating
@@ -316,17 +316,17 @@ sudo ./install.sh
 
 ### Manual Update
 ```bash
-cd /opt/walpanel
-sudo systemctl stop walpanel
+cd /opt/xsell
+sudo systemctl stop xsell
 
 # Backup current version
-sudo cp -r /opt/walpanel /opt/walpanel.backup.$(date +%Y%m%d_%H%M%S)
+sudo cp -r /opt/xsell /opt/xsell.backup.$(date +%Y%m%d_%H%M%S)
 
 # Update dependencies
 cd server && sudo npm update
 cd .. && sudo npm update && sudo npm run build
 
-sudo systemctl start walpanel
+sudo systemctl start xsell
 ```
 
 ## 🐛 Troubleshooting
@@ -336,24 +336,24 @@ sudo systemctl start walpanel
 #### 1. Service Won't Start
 ```bash
 # Check service status
-sudo systemctl status walpanel
+sudo systemctl status xsell
 
 # View detailed logs
-sudo journalctl -u walpanel -n 50
+sudo journalctl -u xsell -n 50
 
 # Check file permissions
-sudo chown -R walpanel:walpanel /opt/walpanel
-sudo systemctl restart walpanel
+sudo chown -R xsell:xsell /opt/xsell
+sudo systemctl restart xsell
 ```
 
 #### 2. Database Connection Issues
 ```bash
 # Check database file
-ls -la /opt/walpanel/server/database.sqlite
+ls -la /opt/xsell/server/database.sqlite
 
 # Reset database permissions
-sudo chown walpanel:walpanel /opt/walpanel/server/database.sqlite
-sudo chmod 644 /opt/walpanel/server/database.sqlite
+sudo chown xsell:xsell /opt/xsell/server/database.sqlite
+sudo chmod 644 /opt/xsell/server/database.sqlite
 ```
 
 #### 3. Nginx Configuration Errors
@@ -365,7 +365,7 @@ sudo nginx -t
 sudo systemctl reload nginx
 
 # Check Nginx logs
-sudo tail -f /var/log/nginx/walpanel_error.log
+sudo tail -f /var/log/nginx/xsell_error.log
 ```
 
 #### 4. SSL Certificate Issues
@@ -394,16 +394,16 @@ curl -I http://your-xui-panel
 ### Log Files
 ```bash
 # Application logs
-sudo journalctl -u walpanel -f
+sudo journalctl -u xsell -f
 
 # Nginx access logs
-sudo tail -f /var/log/nginx/walpanel_access.log
+sudo tail -f /var/log/nginx/xsell_access.log
 
 # Nginx error logs
-sudo tail -f /var/log/nginx/walpanel_error.log
+sudo tail -f /var/log/nginx/xsell_error.log
 
 # Installation log
-sudo tail -f /var/log/walpanel-install.log
+sudo tail -f /var/log/xsell-install.log
 ```
 
 ### Performance Optimization
@@ -411,10 +411,10 @@ sudo tail -f /var/log/walpanel-install.log
 #### Database Optimization
 ```bash
 # Vacuum database
-sudo sqlite3 /opt/walpanel/server/database.sqlite "VACUUM;"
+sudo sqlite3 /opt/xsell/server/database.sqlite "VACUUM;"
 
 # Analyze database
-sudo sqlite3 /opt/walpanel/server/database.sqlite "ANALYZE;"
+sudo sqlite3 /opt/xsell/server/database.sqlite "ANALYZE;"
 ```
 
 #### Memory Optimization
@@ -424,7 +424,7 @@ free -h
 ps aux | grep node
 
 # Restart service to free memory
-sudo systemctl restart walpanel
+sudo systemctl restart xsell
 ```
 
 ## 🗑️ Uninstalling
@@ -438,21 +438,21 @@ sudo ./install.sh
 ### Manual Removal
 ```bash
 # Stop and disable service
-sudo systemctl stop walpanel
-sudo systemctl disable walpanel
-sudo rm /etc/systemd/system/walpanel.service
+sudo systemctl stop xsell
+sudo systemctl disable xsell
+sudo rm /etc/systemd/system/xsell.service
 sudo systemctl daemon-reload
 
 # Remove Nginx configuration
-sudo rm /etc/nginx/sites-available/walpanel
-sudo rm /etc/nginx/sites-enabled/walpanel
+sudo rm /etc/nginx/sites-available/xsell
+sudo rm /etc/nginx/sites-enabled/xsell
 sudo systemctl restart nginx
 
 # Remove installation directory
-sudo rm -rf /opt/walpanel
+sudo rm -rf /opt/xsell
 
 # Remove user
-sudo userdel walpanel
+sudo userdel xsell
 
 # Remove SSL certificate (optional)
 sudo certbot delete --cert-name your-domain.com
@@ -488,17 +488,17 @@ sudo certbot delete --cert-name your-domain.com
 curl http://localhost:3001/api/health
 
 # Check database connectivity
-sudo sqlite3 /opt/walpanel/server/database.sqlite ".tables"
+sudo sqlite3 /opt/xsell/server/database.sqlite ".tables"
 
 # Check disk space
-df -h /opt/walpanel
+df -h /opt/xsell
 ```
 
 ### Regular Maintenance
 ```bash
 # Weekly tasks
-sudo systemctl restart walpanel  # Restart service
-sudo sqlite3 /opt/walpanel/server/database.sqlite "VACUUM;"  # Optimize database
+sudo systemctl restart xsell  # Restart service
+sudo sqlite3 /opt/xsell/server/database.sqlite "VACUUM;"  # Optimize database
 
 # Monthly tasks
 sudo ./install.sh  # Check for updates (option 3)
