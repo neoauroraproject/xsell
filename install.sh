@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # X-UI SELL Installation Script by Hmray
-# Version: 2.0.3
-# Description: Complete installation script with port conflict resolution
+# Version: 2.0.4
+# Description: Complete installation script with improved SSL handling
 
 set -e
 
@@ -124,6 +124,31 @@ stop_existing_services() {
     kill_port_processes 3000
     
     print_success "Existing services stopped"
+}
+
+# Function to clean nginx configuration
+clean_nginx_config() {
+    print_status "Cleaning Nginx configuration..."
+    
+    # Stop nginx
+    systemctl stop nginx 2>/dev/null || true
+    
+    # Remove any existing SSL configurations
+    rm -f "$NGINX_CONF" "$NGINX_ENABLED"
+    rm -f /etc/nginx/sites-available/default
+    rm -f /etc/nginx/sites-enabled/default
+    
+    # Remove any SSL references from main nginx.conf
+    if [[ -f /etc/nginx/nginx.conf ]]; then
+        # Backup original nginx.conf
+        cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.backup
+        
+        # Remove any SSL certificate lines that might cause issues
+        sed -i '/ssl_certificate/d' /etc/nginx/nginx.conf
+        sed -i '/ssl_certificate_key/d' /etc/nginx/nginx.conf
+    fi
+    
+    print_success "Nginx configuration cleaned"
 }
 
 # Function to install dependencies based on OS
@@ -516,14 +541,8 @@ EOF
 configure_nginx_http() {
     print_header "Configuring Nginx (HTTP only)..."
     
-    # Backup existing default config if it exists
-    if [[ -f /etc/nginx/sites-enabled/default ]]; then
-        print_status "Backing up default Nginx configuration..."
-        mv /etc/nginx/sites-enabled/default /etc/nginx/sites-enabled/default.backup
-    fi
-    
-    # Remove any existing SSL configuration
-    rm -f "$NGINX_CONF" "$NGINX_ENABLED"
+    # Clean any existing configurations first
+    clean_nginx_config
     
     # Create initial HTTP-only Nginx configuration
     cat > "$NGINX_CONF" << EOF
@@ -578,17 +597,29 @@ EOF
     ln -sf "$NGINX_CONF" "$NGINX_ENABLED"
     
     # Test Nginx configuration
+    print_status "Testing Nginx configuration..."
     if nginx -t; then
         print_success "Nginx HTTP configuration is valid"
     else
         print_error "Nginx configuration is invalid"
+        print_status "Configuration content:"
         cat "$NGINX_CONF"
         exit 1
     fi
     
     # Start Nginx
-    systemctl restart nginx
+    print_status "Starting Nginx..."
+    systemctl start nginx
     systemctl enable nginx
+    
+    # Verify Nginx is running
+    if systemctl is-active --quiet nginx; then
+        print_success "Nginx started successfully"
+    else
+        print_error "Failed to start Nginx"
+        systemctl status nginx --no-pager
+        exit 1
+    fi
     
     print_success "Nginx HTTP configuration completed"
 }
@@ -910,7 +941,7 @@ show_menu() {
     clear
     print_header "╔══════════════════════════════════════════════════════════════╗"
     print_header "║                    X-UI SELL Installer                      ║"
-    print_header "║              Professional X-UI Management v2.0.3            ║"
+    print_header "║              Professional X-UI Management v2.0.4            ║"
     print_header "║                  Design by Hmray                            ║"
     print_header "╚══════════════════════════════════════════════════════════════╝"
     echo
@@ -927,7 +958,8 @@ show_menu() {
     echo "9) ⚙️ Advanced Installation (Full Configuration)"
     echo "10) 🔧 Fix SSL Certificate"
     echo "11) 🔄 Restart Services"
-    echo "12) ❌ Exit"
+    echo "12) 🧹 Clean Install (Remove all and reinstall)"
+    echo "13) ❌ Exit"
     echo
 }
 
@@ -1104,6 +1136,14 @@ view_service_status() {
     echo
     print_status "Port usage:"
     netstat -tlnp | grep -E ':(3000|3001)' || echo "No processes found on ports 3000/3001"
+    
+    echo
+    print_status "Nginx status:"
+    if systemctl is-active --quiet nginx; then
+        print_success "Nginx is running"
+    else
+        print_error "Nginx is not running"
+    fi
 }
 
 # Function to view logs
@@ -1126,7 +1166,8 @@ fix_ssl() {
         return 1
     fi
     
-    # First configure HTTP-only Nginx
+    # First clean and configure HTTP-only Nginx
+    clean_nginx_config
     configure_nginx_http
     
     # Then install SSL
@@ -1164,6 +1205,43 @@ restart_services() {
     fi
 }
 
+# Function to clean install
+clean_install() {
+    print_header "Clean Installation..."
+    
+    read -p "This will completely remove X-UI SELL Panel and reinstall. Continue? (y/N): " confirm
+    if [[ "$confirm" != "y" ]]; then
+        print_status "Clean install cancelled"
+        return 0
+    fi
+    
+    # Uninstall first
+    print_status "Removing existing installation..."
+    
+    # Stop services
+    systemctl stop "$SERVICE_NAME" 2>/dev/null || true
+    systemctl stop nginx 2>/dev/null || true
+    
+    # Remove service files
+    systemctl disable "$SERVICE_NAME" 2>/dev/null || true
+    rm -f "/etc/systemd/system/$SERVICE_NAME.service"
+    systemctl daemon-reload
+    
+    # Clean nginx
+    clean_nginx_config
+    
+    # Remove installation directory
+    rm -rf "$XSELL_DIR"
+    
+    # Remove user
+    userdel xsell 2>/dev/null || true
+    
+    print_success "Cleanup completed. Starting fresh installation..."
+    
+    # Now run fresh installation
+    main_install_quick
+}
+
 # Main installation function (Quick Setup)
 main_install_quick() {
     print_header "Starting Quick Installation..."
@@ -1177,6 +1255,7 @@ main_install_quick() {
     detect_os
     get_simple_user_input
     stop_existing_services
+    clean_nginx_config  # Clean nginx first
     install_dependencies
     create_user
     install_xsell
@@ -1205,6 +1284,7 @@ main_install_advanced() {
     detect_os
     get_full_user_input
     stop_existing_services
+    clean_nginx_config  # Clean nginx first
     install_dependencies
     create_user
     install_xsell
@@ -1224,7 +1304,7 @@ main_install_advanced() {
 main() {
     while true; do
         show_menu
-        read -p "Enter your choice [1-12]: " choice
+        read -p "Enter your choice [1-13]: " choice
         case $choice in
             1)
                 main_install_quick
@@ -1276,6 +1356,11 @@ main() {
                 read -p "Press Enter to continue..."
                 ;;
             12)
+                check_root
+                clean_install
+                read -p "Press Enter to continue..."
+                ;;
+            13)
                 print_status "Goodbye!"
                 echo
                 print_header "Copyright © 2025 Design and developed by Hmray"
