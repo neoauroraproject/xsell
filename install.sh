@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # X-UI SELL Installation Script by Hmray
-# Version: 2.0.5
-# Description: Complete installation script with improved Nginx handling
+# Version: 2.0.6
+# Description: Complete installation script with improved Nginx handling and sudo compatibility
 
 set -e
 
@@ -54,7 +54,11 @@ log_message() {
 # Function to check if running as root
 check_root() {
     if [[ $EUID -ne 0 ]]; then
-        print_error "This script must be run as root (use sudo)"
+        print_error "This script must be run as root"
+        print_status "Please run one of the following:"
+        print_status "1. If sudo is available: sudo $0"
+        print_status "2. If sudo is not available: su - root, then run $0"
+        print_status "3. Login directly as root user and run $0"
         exit 1
     fi
 }
@@ -107,13 +111,13 @@ stop_existing_services() {
     print_status "Stopping existing services..."
     
     # Stop any existing xsell service
-    if systemctl is-active --quiet xsell; then
+    if systemctl is-active --quiet xsell 2>/dev/null; then
         print_status "Stopping xsell service..."
         systemctl stop xsell
     fi
     
     # Stop any existing walpanel service (old name)
-    if systemctl is-active --quiet walpanel; then
+    if systemctl is-active --quiet walpanel 2>/dev/null; then
         print_status "Stopping old walpanel service..."
         systemctl stop walpanel
         systemctl disable walpanel 2>/dev/null || true
@@ -1006,7 +1010,7 @@ show_menu() {
     clear
     print_header "╔══════════════════════════════════════════════════════════════╗"
     print_header "║                    X-UI SELL Installer                      ║"
-    print_header "║              Professional X-UI Management v2.0.5            ║"
+    print_header "║              Professional X-UI Management v2.0.6            ║"
     print_header "║                  Design by Hmray                            ║"
     print_header "╚══════════════════════════════════════════════════════════════╝"
     echo
