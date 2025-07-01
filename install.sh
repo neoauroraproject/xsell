@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # X-UI SELL Installation Script by Hmray
-# Version: 2.0.4
-# Description: Complete installation script with improved SSL handling
+# Version: 2.0.5
+# Description: Complete installation script with improved Nginx handling
 
 set -e
 
@@ -126,29 +126,92 @@ stop_existing_services() {
     print_success "Existing services stopped"
 }
 
-# Function to clean nginx configuration
+# Function to completely clean nginx configuration
 clean_nginx_config() {
-    print_status "Cleaning Nginx configuration..."
+    print_status "Completely cleaning Nginx configuration..."
     
     # Stop nginx
     systemctl stop nginx 2>/dev/null || true
     
-    # Remove any existing SSL configurations
+    # Remove any existing site configurations
     rm -f "$NGINX_CONF" "$NGINX_ENABLED"
     rm -f /etc/nginx/sites-available/default
     rm -f /etc/nginx/sites-enabled/default
+    rm -f /etc/nginx/sites-available/default.backup
+    rm -f /etc/nginx/sites-enabled/default.backup
     
-    # Remove any SSL references from main nginx.conf
+    # Clean up any xsell or walpanel configurations
+    rm -f /etc/nginx/sites-available/walpanel
+    rm -f /etc/nginx/sites-enabled/walpanel
+    rm -f /etc/nginx/sites-available/xsell
+    rm -f /etc/nginx/sites-enabled/xsell
+    
+    # Backup and clean main nginx.conf
     if [[ -f /etc/nginx/nginx.conf ]]; then
-        # Backup original nginx.conf
-        cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.backup
+        # Create a backup
+        cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.backup.$(date +%Y%m%d_%H%M%S)
         
-        # Remove any SSL certificate lines that might cause issues
-        sed -i '/ssl_certificate/d' /etc/nginx/nginx.conf
-        sed -i '/ssl_certificate_key/d' /etc/nginx/nginx.conf
+        # Create a clean nginx.conf
+        cat > /etc/nginx/nginx.conf << 'EOF'
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+    worker_connections 768;
+    # multi_accept on;
+}
+
+http {
+    ##
+    # Basic Settings
+    ##
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+    
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    
+    ##
+    # SSL Settings
+    ##
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    
+    ##
+    # Logging Settings
+    ##
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
+    
+    ##
+    # Gzip Settings
+    ##
+    gzip on;
+    
+    ##
+    # Virtual Host Configs
+    ##
+    include /etc/nginx/conf.d/*.conf;
+    include /etc/nginx/sites-enabled/*;
+}
+EOF
     fi
     
-    print_success "Nginx configuration cleaned"
+    # Ensure sites-available and sites-enabled directories exist
+    mkdir -p /etc/nginx/sites-available
+    mkdir -p /etc/nginx/sites-enabled
+    
+    # Test nginx configuration
+    if nginx -t 2>/dev/null; then
+        print_success "Nginx configuration cleaned successfully"
+    else
+        print_warning "Nginx configuration test failed, but continuing..."
+    fi
 }
 
 # Function to install dependencies based on OS
@@ -604,6 +667,8 @@ EOF
         print_error "Nginx configuration is invalid"
         print_status "Configuration content:"
         cat "$NGINX_CONF"
+        print_status "Nginx test output:"
+        nginx -t
         exit 1
     fi
     
@@ -941,7 +1006,7 @@ show_menu() {
     clear
     print_header "╔══════════════════════════════════════════════════════════════╗"
     print_header "║                    X-UI SELL Installer                      ║"
-    print_header "║              Professional X-UI Management v2.0.4            ║"
+    print_header "║              Professional X-UI Management v2.0.5            ║"
     print_header "║                  Design by Hmray                            ║"
     print_header "╚══════════════════════════════════════════════════════════════╝"
     echo
@@ -959,7 +1024,8 @@ show_menu() {
     echo "10) 🔧 Fix SSL Certificate"
     echo "11) 🔄 Restart Services"
     echo "12) 🧹 Clean Install (Remove all and reinstall)"
-    echo "13) ❌ Exit"
+    echo "13) 🔧 Fix Nginx Configuration"
+    echo "14) ❌ Exit"
     echo
 }
 
@@ -1242,6 +1308,41 @@ clean_install() {
     main_install_quick
 }
 
+# Function to fix nginx configuration
+fix_nginx_config() {
+    print_header "Fixing Nginx Configuration..."
+    
+    print_status "Stopping Nginx..."
+    systemctl stop nginx 2>/dev/null || true
+    
+    print_status "Completely cleaning Nginx configuration..."
+    clean_nginx_config
+    
+    print_status "Testing clean Nginx configuration..."
+    if nginx -t; then
+        print_success "Clean Nginx configuration is valid"
+    else
+        print_error "Even clean Nginx configuration is invalid"
+        print_status "Nginx test output:"
+        nginx -t
+        return 1
+    fi
+    
+    print_status "Starting Nginx with clean configuration..."
+    systemctl start nginx
+    
+    if systemctl is-active --quiet nginx; then
+        print_success "Nginx started successfully with clean configuration"
+    else
+        print_error "Failed to start Nginx even with clean configuration"
+        systemctl status nginx --no-pager
+        return 1
+    fi
+    
+    print_success "Nginx configuration fixed!"
+    print_status "You can now run the installation again."
+}
+
 # Main installation function (Quick Setup)
 main_install_quick() {
     print_header "Starting Quick Installation..."
@@ -1304,7 +1405,7 @@ main_install_advanced() {
 main() {
     while true; do
         show_menu
-        read -p "Enter your choice [1-13]: " choice
+        read -p "Enter your choice [1-14]: " choice
         case $choice in
             1)
                 main_install_quick
@@ -1361,6 +1462,11 @@ main() {
                 read -p "Press Enter to continue..."
                 ;;
             13)
+                check_root
+                fix_nginx_config
+                read -p "Press Enter to continue..."
+                ;;
+            14)
                 print_status "Goodbye!"
                 echo
                 print_header "Copyright © 2025 Design and developed by Hmray"
