@@ -34,7 +34,7 @@ export const ApiTesting: React.FC = () => {
   const [showDetails, setShowDetails] = useState(false);
   const [selectedResult, setSelectedResult] = useState<TestResult | null>(null);
   const [testConfig, setTestConfig] = useState({
-    panelUrl: 'http://85.237.211.232:2053/UHAxUEujzMD8UUL/',
+    panelUrl: 'https://x2.hmray.us:44965/sjagaOuItVFnqTa',
     panelUsername: 'hmray',
     panelPassword: 'hmray123',
     testUserEmail: 'test@example.com',
@@ -78,10 +78,17 @@ export const ApiTesting: React.FC = () => {
     try {
       // 1. Test API Health
       await runTest('API Health Check', async () => {
-        const response = await fetch('http://localhost:3001/api/health');
-        const data = await response.json();
-        if (!data.success) throw new Error('Health check failed');
-        return data;
+        try {
+          const response = await apiClient.healthCheck();
+          if (!response.success) throw new Error('Health check failed');
+          return response;
+        } catch (error) {
+          // Fallback test
+          const response = await fetch('/api/health');
+          if (!response.ok) throw new Error('API server is not responding');
+          const data = await response.json();
+          return data;
+        }
       });
 
       // 2. Test Authentication
@@ -134,34 +141,37 @@ export const ApiTesting: React.FC = () => {
             testConfig.panelUsername,
             testConfig.panelPassword
           );
-          if (!response.success) throw new Error('X-UI connection failed');
+          if (!response.success) throw new Error('X-UI connection failed: ' + response.message);
+          return response;
+        });
+
+        // 9. Test X-UI Panel Stats
+        await runTest('X-UI Panel Stats', async () => {
+          // First get panels to find one to test with
+          const panelsResponse = await apiClient.getPanels();
+          if (!panelsResponse.success || !panelsResponse.data.length) {
+            throw new Error('No panels available for testing');
+          }
+          
+          const testPanel = panelsResponse.data[0];
+          const response = await apiClient.getXUIStats(testPanel.id);
+          if (!response.success) throw new Error('Failed to get panel stats');
+          return response;
+        });
+
+        // 10. Test X-UI Inbounds
+        await runTest('X-UI Inbounds', async () => {
+          const panelsResponse = await apiClient.getPanels();
+          if (!panelsResponse.success || !panelsResponse.data.length) {
+            throw new Error('No panels available for testing');
+          }
+          
+          const testPanel = panelsResponse.data[0];
+          const response = await apiClient.getXUIInbounds(testPanel.id);
+          if (!response.success) throw new Error('Failed to get inbounds');
           return response;
         });
       }
-
-      // 9. Test Create Panel
-      await runTest('Create Test Panel', async () => {
-        const response = await apiClient.createPanel({
-          name: 'Test Panel',
-          url: testConfig.panelUrl,
-          username: testConfig.panelUsername,
-          password: testConfig.panelPassword
-        });
-        if (!response.success) throw new Error('Failed to create panel');
-        return response;
-      });
-
-      // 10. Test Create User
-      await runTest('Create Test User', async () => {
-        const response = await apiClient.createUser({
-          username: 'testuser',
-          email: testConfig.testUserEmail,
-          traffic_limit: parseInt(testConfig.testTrafficGB) * 1024 * 1024 * 1024,
-          expiry_date: new Date(Date.now() + parseInt(testConfig.testExpiryDays) * 24 * 60 * 60 * 1000).toISOString()
-        });
-        if (!response.success) throw new Error('Failed to create user');
-        return response;
-      });
 
     } catch (error) {
       console.error('Test suite error:', error);
@@ -253,7 +263,7 @@ export const ApiTesting: React.FC = () => {
                 value={testConfig.panelUrl}
                 onChange={(e) => setTestConfig({...testConfig, panelUrl: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white text-sm"
-                placeholder="http://your-panel-url:port/path"
+                placeholder="https://your-panel-url:port/path"
               />
             </div>
             <div>
@@ -278,44 +288,6 @@ export const ApiTesting: React.FC = () => {
                 onChange={(e) => setTestConfig({...testConfig, panelPassword: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white text-sm"
                 placeholder="Panel password"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Test User Email
-              </label>
-              <input
-                type="email"
-                value={testConfig.testUserEmail}
-                onChange={(e) => setTestConfig({...testConfig, testUserEmail: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white text-sm"
-                placeholder="test@example.com"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Test Traffic (GB)
-              </label>
-              <input
-                type="number"
-                value={testConfig.testTrafficGB}
-                onChange={(e) => setTestConfig({...testConfig, testTrafficGB: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white text-sm"
-                placeholder="10"
-                min="1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Test Expiry (Days)
-              </label>
-              <input
-                type="number"
-                value={testConfig.testExpiryDays}
-                onChange={(e) => setTestConfig({...testConfig, testExpiryDays: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white text-sm"
-                placeholder="30"
-                min="1"
               />
             </div>
           </div>

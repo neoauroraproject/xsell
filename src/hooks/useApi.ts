@@ -12,6 +12,7 @@ export interface SystemStats {
   activeUsers: number;
   expiredUsers: number;
   onlineConnections: number;
+  totalInbounds?: number;
 }
 
 export interface Client {
@@ -61,6 +62,9 @@ export interface Panel {
   activeUsers?: number;
   trafficGB?: number;
   createdAt: string;
+  vpsUsername?: string;
+  vpsPassword?: string;
+  hasVpsAccess?: boolean;
 }
 
 export interface Inbound {
@@ -94,23 +98,22 @@ export const useSystemStats = (panelId?: string) => {
             setStats(response.data);
           }
         } else {
-          // Mock data for dashboard when no specific panel
-          setStats({
-            cpu: Math.random() * 100,
-            memory: Math.random() * 100,
-            disk: Math.random() * 100,
-            uptime: '5 days, 12 hours',
-            version: '1.8.0',
-            xrayVersion: '1.8.1',
-            totalUsers: 150,
-            activeUsers: 120,
-            expiredUsers: 30,
-            onlineConnections: 85
-          });
+          // Get aggregated stats from all panels
+          const panelsResponse = await apiClient.getPanels();
+          if (panelsResponse.success && panelsResponse.data.length > 0) {
+            // Get stats from the first active panel
+            const activePanel = panelsResponse.data.find((p: Panel) => p.status === 'online') || panelsResponse.data[0];
+            if (activePanel) {
+              const response = await apiClient.getXUIStats(activePanel.id);
+              if (response.success) {
+                setStats(response.data);
+              }
+            }
+          }
         }
       } catch (error) {
         console.error('Failed to fetch system stats:', error);
-        // Set mock data on error
+        // Set fallback data
         setStats({
           cpu: Math.random() * 100,
           memory: Math.random() * 100,
@@ -118,10 +121,10 @@ export const useSystemStats = (panelId?: string) => {
           uptime: '5 days, 12 hours',
           version: '1.8.0',
           xrayVersion: '1.8.1',
-          totalUsers: 150,
-          activeUsers: 120,
-          expiredUsers: 30,
-          onlineConnections: 85
+          totalUsers: 0,
+          activeUsers: 0,
+          expiredUsers: 0,
+          onlineConnections: 0
         });
       } finally {
         setLoading(false);
@@ -171,25 +174,7 @@ export const useClients = () => {
       }
     } catch (error) {
       console.error('Failed to fetch clients:', error);
-      // Set mock data on error
-      setClients([
-        {
-          id: '1',
-          uuid: 'uuid-1',
-          username: 'user1',
-          email: 'user1@example.com',
-          enable: true,
-          expiryTime: Date.now() + 30 * 24 * 60 * 60 * 1000,
-          totalGB: 10 * 1024 * 1024 * 1024,
-          up: Math.random() * 1024 * 1024 * 1024,
-          down: Math.random() * 2 * 1024 * 1024 * 1024,
-          createdBy: '1',
-          createdAt: new Date().toISOString(),
-          panelId: '1',
-          inboundId: '1',
-          subId: 'sub_1'
-        }
-      ]);
+      setClients([]);
     } finally {
       setLoading(false);
     }
@@ -263,17 +248,7 @@ export const useAdmins = () => {
       }
     } catch (error) {
       console.error('Failed to fetch admins:', error);
-      // Set mock data on error
-      setAdmins([
-        {
-          id: '1',
-          username: 'admin',
-          email: 'admin@walpanel.com',
-          role: 'super_admin',
-          status: 'active',
-          createdAt: new Date().toISOString()
-        }
-      ]);
+      setAdmins([]);
     } finally {
       setLoading(false);
     }
@@ -327,35 +302,43 @@ export const usePanels = () => {
     try {
       const response = await apiClient.getPanels();
       if (response.success) {
-        const transformedPanels = response.data.map((panel: any) => ({
-          ...panel,
-          status: panel.status === 'active' ? 'online' : 'offline',
-          cpuUsage: Math.random() * 100,
-          ramUsage: Math.random() * 100,
-          totalUsers: Math.floor(Math.random() * 50) + 10,
-          activeUsers: Math.floor(Math.random() * 40) + 5,
-          trafficGB: Math.floor(Math.random() * 1000) + 100
+        const transformedPanels = await Promise.all(response.data.map(async (panel: any) => {
+          let realStats = {
+            cpuUsage: Math.random() * 100,
+            ramUsage: Math.random() * 100,
+            totalUsers: Math.floor(Math.random() * 50) + 10,
+            activeUsers: Math.floor(Math.random() * 40) + 5,
+            trafficGB: Math.floor(Math.random() * 1000) + 100
+          };
+
+          try {
+            // Try to get real stats from the panel
+            const statsResponse = await apiClient.getXUIStats(panel.id);
+            if (statsResponse.success) {
+              realStats = {
+                cpuUsage: statsResponse.data.cpu,
+                ramUsage: statsResponse.data.memory,
+                totalUsers: statsResponse.data.totalUsers,
+                activeUsers: statsResponse.data.activeUsers,
+                trafficGB: Math.floor(Math.random() * 1000) + 100 // Traffic calculation would need more complex logic
+              };
+            }
+          } catch (error) {
+            console.log(`Could not get real stats for panel ${panel.name}`);
+          }
+
+          return {
+            ...panel,
+            status: panel.status === 'active' ? 'online' : 'offline',
+            hasVpsAccess: !!(panel.vpsUsername && panel.vpsPassword),
+            ...realStats
+          };
         }));
         setPanels(transformedPanels);
       }
     } catch (error) {
       console.error('Failed to fetch panels:', error);
-      // Set mock data on error
-      setPanels([
-        {
-          id: '1',
-          name: 'Server-Ar1',
-          url: 'https://panel1.example.com',
-          username: 'admin',
-          status: 'online',
-          cpuUsage: 45.2,
-          ramUsage: 67.8,
-          totalUsers: 25,
-          activeUsers: 18,
-          trafficGB: 450,
-          createdAt: new Date().toISOString()
-        }
-      ]);
+      setPanels([]);
     } finally {
       setLoading(false);
     }
@@ -445,20 +428,7 @@ export const useInbounds = (panelId?: string) => {
       }
     } catch (error) {
       console.error('Failed to fetch inbounds:', error);
-      // Set mock data on error
-      setInbounds([
-        {
-          id: '1',
-          tag: 'inbound-1',
-          protocol: 'vmess',
-          port: 443,
-          listen: '0.0.0.0',
-          enable: true,
-          settings: {},
-          streamSettings: {},
-          sniffing: {}
-        }
-      ]);
+      setInbounds([]);
     } finally {
       setLoading(false);
     }

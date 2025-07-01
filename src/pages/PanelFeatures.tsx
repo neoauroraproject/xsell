@@ -17,7 +17,8 @@ import {
   Server,
   Cpu,
   Globe,
-  Check
+  Check,
+  AlertCircle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -36,6 +37,9 @@ export const PanelFeatures: React.FC = () => {
     type: 'subscription',
     file: null as File | null
   });
+
+  // Filter panels to show only those with VPS access
+  const vpsEnabledPanels = panels.filter(panel => panel.hasVpsAccess);
 
   const handleOperation = async (operation: string, panelId: string) => {
     const operationKey = `${operation}-${panelId}`;
@@ -107,6 +111,14 @@ export const PanelFeatures: React.FC = () => {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <motion.div
@@ -116,7 +128,9 @@ export const PanelFeatures: React.FC = () => {
       >
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Panel Features</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">Manage panel features and templates</p>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            Manage advanced features for VPS-enabled panels ({vpsEnabledPanels.length} available)
+          </p>
         </div>
         <Button onClick={() => setShowTemplateModal(true)} className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700">
           <Plus className="h-4 w-4" />
@@ -124,26 +138,53 @@ export const PanelFeatures: React.FC = () => {
         </Button>
       </motion.div>
 
+      {/* VPS Access Notice */}
+      {vpsEnabledPanels.length === 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Card className="p-6 border-yellow-200 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-800">
+            <div className="flex items-center space-x-3">
+              <AlertCircle className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+              <div>
+                <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200">
+                  No VPS-Enabled Panels Found
+                </h3>
+                <p className="text-yellow-700 dark:text-yellow-300 mt-1">
+                  Panel features require VPS access. Please add panels with VPS credentials to use advanced features.
+                </p>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Panel Selection */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Select Panel</h3>
-          <select
-            value={selectedPanel}
-            onChange={(e) => setSelectedPanel(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-          >
-            <option value="">Select a panel...</option>
-            {panels.map(panel => (
-              <option key={panel.id} value={panel.id}>{panel.name}</option>
-            ))}
-          </select>
-        </Card>
-      </motion.div>
+      {vpsEnabledPanels.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Select VPS-Enabled Panel</h3>
+            <select
+              value={selectedPanel}
+              onChange={(e) => setSelectedPanel(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+            >
+              <option value="">Select a VPS-enabled panel...</option>
+              {vpsEnabledPanels.map(panel => (
+                <option key={panel.id} value={panel.id}>
+                  {panel.name} (VPS Access Available)
+                </option>
+              ))}
+            </select>
+          </Card>
+        </motion.div>
+      )}
 
       {selectedPanel && (
         <>

@@ -9,6 +9,8 @@ router.post('/test-connection', authenticateToken, async (req, res) => {
   try {
     const { url, username, password } = req.body;
 
+    console.log('Testing X-UI connection:', { url, username, hasPassword: !!password });
+
     if (!url || !username || !password) {
       return res.status(400).json({
         success: false,
@@ -18,10 +20,12 @@ router.post('/test-connection', authenticateToken, async (req, res) => {
 
     const result = await xuiService.testConnection(url, username, password);
 
+    console.log('Connection test result:', result);
+
     res.json({
-      success: true,
-      message: 'Connection test completed',
-      data: result
+      success: result.success,
+      message: result.message,
+      data: result.data || null
     });
   } catch (error) {
     console.error('X-UI connection test error:', error);
@@ -37,6 +41,8 @@ router.post('/test-connection', authenticateToken, async (req, res) => {
 router.get('/stats/:panelId', authenticateToken, async (req, res) => {
   try {
     const { panelId } = req.params;
+    console.log('Getting stats for panel:', panelId);
+    
     const stats = await xuiService.getSystemStats(panelId);
 
     res.json({
@@ -57,6 +63,8 @@ router.get('/stats/:panelId', authenticateToken, async (req, res) => {
 router.get('/inbounds/:panelId', authenticateToken, async (req, res) => {
   try {
     const { panelId } = req.params;
+    console.log('Getting inbounds for panel:', panelId);
+    
     const inbounds = await xuiService.getInbounds(panelId);
 
     res.json({
@@ -68,6 +76,28 @@ router.get('/inbounds/:panelId', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to get inbounds',
+      error: error.message
+    });
+  }
+});
+
+// Get X-UI inbound traffic
+router.get('/traffic/:panelId', authenticateToken, async (req, res) => {
+  try {
+    const { panelId } = req.params;
+    console.log('Getting traffic for panel:', panelId);
+    
+    const traffic = await xuiService.getInboundTraffic(panelId);
+
+    res.json({
+      success: true,
+      data: traffic
+    });
+  } catch (error) {
+    console.error('Get X-UI traffic error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get traffic data',
       error: error.message
     });
   }
@@ -136,6 +166,28 @@ router.delete('/clients/:panelId/:clientId', authenticateToken, async (req, res)
     res.status(500).json({
       success: false,
       message: 'Failed to delete client',
+      error: error.message
+    });
+  }
+});
+
+// Reset client traffic
+router.post('/clients/:panelId/:clientId/reset-traffic', authenticateToken, async (req, res) => {
+  try {
+    const { panelId, clientId } = req.params;
+
+    const result = await xuiService.resetClientTraffic(panelId, clientId);
+
+    res.json({
+      success: true,
+      message: 'Client traffic reset successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error('Reset client traffic error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reset client traffic',
       error: error.message
     });
   }
