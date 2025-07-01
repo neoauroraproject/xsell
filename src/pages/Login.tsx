@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Shield, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Shield, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const Login: React.FC = () => {
@@ -9,9 +9,8 @@ export const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { login, isAuthenticated, error: authError, clearError } = useAuth();
+  const { login, isAuthenticated } = useAuth();
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -20,58 +19,28 @@ export const Login: React.FC = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  // Clear errors when inputs change
-  useEffect(() => {
-    if (error || authError) {
-      setError('');
-      clearError();
-    }
-  }, [username, password, clearError]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Clear any existing errors
-    setError('');
-    clearError();
-    
     // Validate inputs
-    if (!username.trim()) {
-      setError('Username is required');
-      return;
-    }
-    
-    if (!password.trim()) {
-      setError('Password is required');
+    if (!username.trim() || !password.trim()) {
       return;
     }
 
     setLoading(true);
 
     try {
-      console.log('🔐 Attempting login with:', { username, timestamp: new Date().toISOString() });
-      
       const success = await login(username.trim(), password);
       
-      console.log('🎯 Login result:', success);
-      
       if (success) {
-        console.log('✅ Login successful, should redirect to dashboard');
-        // Navigation will happen automatically via useEffect when isAuthenticated changes
-      } else {
-        console.log('❌ Login failed');
-        setError('Invalid username or password');
+        navigate('/');
       }
     } catch (err: any) {
-      console.error('❌ Login error:', err);
-      setError(err.message || 'Login failed. Please try again.');
+      console.error('Login error:', err);
     } finally {
       setLoading(false);
     }
   };
-
-  // Display error from auth hook or local error
-  const displayError = authError || error;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
@@ -95,20 +64,6 @@ export const Login: React.FC = () => {
             <p className="mt-2 text-gray-600 dark:text-gray-400">Professional X-UI Management System</p>
           </div>
 
-          {/* Error Display */}
-          {displayError && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
-            >
-              <div className="flex items-center">
-                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mr-2" />
-                <span className="text-sm text-red-800 dark:text-red-200">{displayError}</span>
-              </div>
-            </motion.div>
-          )}
-
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -126,7 +81,6 @@ export const Login: React.FC = () => {
                   className="pl-10 w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                   placeholder="Enter your username"
                   disabled={loading}
-                  autoComplete="username"
                 />
               </div>
             </div>
@@ -146,7 +100,6 @@ export const Login: React.FC = () => {
                   className="pl-10 pr-10 w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                   placeholder="Enter your password"
                   disabled={loading}
-                  autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -160,8 +113,8 @@ export const Login: React.FC = () => {
             </div>
 
             <motion.button
-              whileHover={{ scale: loading ? 1 : 1.02 }}
-              whileTap={{ scale: loading ? 1 : 0.98 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={loading || !username.trim() || !password.trim()}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
@@ -176,21 +129,6 @@ export const Login: React.FC = () => {
               )}
             </motion.button>
           </form>
-
-          {/* Debug Info (only in development) */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Debug Info:</h4>
-              <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                <div>Username: {username || 'empty'}</div>
-                <div>Password: {password ? '***' : 'empty'}</div>
-                <div>Loading: {loading ? 'true' : 'false'}</div>
-                <div>Authenticated: {isAuthenticated ? 'true' : 'false'}</div>
-                <div>Auth Error: {authError || 'none'}</div>
-                <div>Local Error: {error || 'none'}</div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Copyright */}
