@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # X-UI SELL Installation Script by Hmray
-# Version: 2.0.1
-# Description: Complete installation script with simplified setup option
+# Version: 2.0.2
+# Description: Complete installation script with proper SSL handling
 
 set -e
 
@@ -77,6 +77,12 @@ detect_os() {
 # Function to check if command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
+}
+
+# Function to check if SSL certificate exists
+ssl_cert_exists() {
+    local domain="$1"
+    [[ -f "/etc/letsencrypt/live/$domain/fullchain.pem" && -f "/etc/letsencrypt/live/$domain/privkey.pem" ]]
 }
 
 # Function to install dependencies based on OS
@@ -458,13 +464,16 @@ EOF
 
 # Function to configure Nginx (HTTP only initially)
 configure_nginx_http() {
-    print_header "Configuring Nginx (HTTP)..."
+    print_header "Configuring Nginx (HTTP only)..."
     
     # Backup existing default config if it exists
     if [[ -f /etc/nginx/sites-enabled/default ]]; then
         print_status "Backing up default Nginx configuration..."
         mv /etc/nginx/sites-enabled/default /etc/nginx/sites-enabled/default.backup
     fi
+    
+    # Remove any existing SSL configuration
+    rm -f "$NGINX_CONF" "$NGINX_ENABLED"
     
     # Create initial HTTP-only Nginx configuration
     cat > "$NGINX_CONF" << EOF
@@ -523,6 +532,7 @@ EOF
         print_success "Nginx HTTP configuration is valid"
     else
         print_error "Nginx configuration is invalid"
+        cat "$NGINX_CONF"
         exit 1
     fi
     
@@ -535,7 +545,13 @@ EOF
 
 # Function to configure Nginx with SSL
 configure_nginx_ssl() {
-    print_header "Configuring Nginx with SSL..."
+    print_header "Updating Nginx configuration with SSL..."
+    
+    # Verify SSL certificates exist
+    if ! ssl_cert_exists "$DOMAIN"; then
+        print_error "SSL certificates not found for domain: $DOMAIN"
+        return 1
+    fi
     
     # Create HTTPS configuration
     cat > "$NGINX_CONF" << EOF
@@ -612,12 +628,15 @@ EOF
     if nginx -t; then
         print_success "Nginx SSL configuration is valid"
         systemctl reload nginx
+        print_success "Nginx reloaded with SSL configuration"
     else
         print_error "Nginx SSL configuration is invalid"
-        exit 1
+        print_warning "Reverting to HTTP configuration"
+        configure_nginx_http
+        return 1
     fi
     
-    print_success "Nginx SSL configuration completed"
+    return 0
 }
 
 # Function to configure firewall
@@ -653,47 +672,77 @@ configure_firewall() {
 
 # Function to install SSL certificate
 install_ssl() {
-    if [[ "$INSTALL_SSL" == "y" ]]; then
-        print_header "Installing SSL Certificate..."
+    if [[ "$INSTALL_SSL" != "y" ]]; then
+        print_status "Skipping SSL certificate installation"
+        return 0
+    fi
+
+    print_header "Installing SSL Certificate..."
+    
+    # Check if SSL certificate already exists
+    if ssl_cert_exists "$DOMAIN"; then
+        print_success "SSL certificate already exists for $DOMAIN"
+        configure_nginx_ssl
+        return 0
+    fi
+    
+    # Make sure Nginx is running with HTTP config first
+    print_status "Ensuring Nginx is running with HTTP configuration..."
+    systemctl restart nginx
+    
+    # Wait a moment for Nginx to start
+    sleep 5
+    
+    # Check if Nginx is actually running
+    if ! systemctl is-active --quiet nginx; then
+        print_error "Nginx is not running. Cannot obtain SSL certificate."
+        return 1
+    fi
+    
+    # Get certificate using nginx plugin (recommended method)
+    print_status "Obtaining SSL certificate from Let's Encrypt using nginx plugin..."
+    if certbot --nginx -d "$DOMAIN" --email "$SSL_EMAIL" --agree-tos --non-interactive --redirect; then
+        print_success "SSL certificate obtained and configured successfully using nginx plugin"
         
-        # Make sure Nginx is running with HTTP config first
-        print_status "Ensuring Nginx is running with HTTP configuration..."
-        systemctl restart nginx
+        # Setup auto-renewal
+        (crontab -l 2>/dev/null; echo "0 12 * * * /usr/bin/certbot renew --quiet") | crontab -
+        print_success "SSL auto-renewal configured"
+        return 0
         
-        # Wait a moment for Nginx to start
-        sleep 3
+    else
+        print_warning "Nginx plugin method failed, trying webroot method..."
         
-        # Get certificate using webroot method
-        print_status "Obtaining SSL certificate from Let's Encrypt..."
-        if certbot --nginx -d "$DOMAIN" --email "$SSL_EMAIL" --agree-tos --non-interactive --redirect; then
-            print_success "SSL certificate obtained and configured successfully"
+        # Try webroot method as fallback
+        if certbot certonly --webroot -w "$XSELL_DIR/dist" -d "$DOMAIN" --email "$SSL_EMAIL" --agree-tos --non-interactive; then
+            print_success "SSL certificate obtained successfully using webroot method"
+            configure_nginx_ssl
             
             # Setup auto-renewal
             (crontab -l 2>/dev/null; echo "0 12 * * * /usr/bin/certbot renew --quiet") | crontab -
             print_success "SSL auto-renewal configured"
+            return 0
             
         else
-            print_warning "Failed to obtain SSL certificate automatically"
-            print_status "Trying alternative method..."
+            print_warning "Webroot method failed, trying standalone method..."
             
-            # Try standalone method as fallback
+            # Try standalone method as last resort
             systemctl stop nginx
             if certbot certonly --standalone -d "$DOMAIN" --email "$SSL_EMAIL" --agree-tos --non-interactive; then
-                print_success "SSL certificate obtained successfully"
-                configure_nginx_ssl
+                print_success "SSL certificate obtained successfully using standalone method"
                 systemctl start nginx
+                configure_nginx_ssl
                 
                 # Setup auto-renewal
                 (crontab -l 2>/dev/null; echo "0 12 * * * /usr/bin/certbot renew --quiet") | crontab -
                 print_success "SSL auto-renewal configured"
+                return 0
             else
-                print_error "Failed to obtain SSL certificate"
+                print_error "All SSL certificate methods failed"
                 print_warning "Continuing with HTTP configuration"
                 systemctl start nginx
+                return 1
             fi
         fi
-    else
-        print_status "Skipping SSL certificate installation"
     fi
 }
 
@@ -747,13 +796,14 @@ display_final_info() {
     echo "=================="
     
     # Check if SSL is actually working
-    if [[ "$INSTALL_SSL" == "y" ]] && [[ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]]; then
+    if ssl_cert_exists "$DOMAIN"; then
         echo "Panel URL: https://$DOMAIN"
         print_success "SSL certificate is installed and active"
     else
         echo "Panel URL: http://$DOMAIN"
         if [[ "$INSTALL_SSL" == "y" ]]; then
-            print_warning "SSL was requested but may not be fully configured"
+            print_warning "SSL was requested but could not be configured"
+            print_status "You can try running option 10 (Fix SSL Certificate) later"
         fi
     fi
     
@@ -776,7 +826,7 @@ display_final_info() {
     echo "Nginx config:    $NGINX_CONF"
     echo "Install log:     $LOG_FILE"
     echo
-    if [[ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]]; then
+    if ssl_cert_exists "$DOMAIN"; then
         echo "SSL Certificate: /etc/letsencrypt/live/$DOMAIN/"
         echo "Auto-renewal:    Configured via crontab"
         echo
@@ -793,7 +843,7 @@ show_menu() {
     clear
     print_header "╔══════════════════════════════════════════════════════════════╗"
     print_header "║                    X-UI SELL Installer                      ║"
-    print_header "║              Professional X-UI Management v2.0.1            ║"
+    print_header "║              Professional X-UI Management v2.0.2            ║"
     print_header "║                  Design by Hmray                            ║"
     print_header "╚══════════════════════════════════════════════════════════════╝"
     echo
