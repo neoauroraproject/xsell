@@ -85,18 +85,25 @@ const _useAuthStateLogic = () => {
         return false;
       }
 
+      console.log('🔐 Attempting login with:', { username, timestamp: new Date().toISOString() });
+      
       const response = await apiClient.login(username, password);
       
+      console.log('📡 Login response:', response);
+      
       if (response.success && response.data && response.data.user && response.data.token) {
+        console.log('✅ Login successful, setting user data');
         setIsAuthenticated(true);
         setUser(response.data.user);
         setError(null);
         return true;
       } else {
+        console.log('❌ Login failed - invalid response structure');
         setError(response.message || 'Invalid username or password');
         return false;
       }
     } catch (error: any) {
+      console.error('❌ Login error:', error);
       setError(error.message || 'Login failed. Please try again.');
       return false;
     } finally {

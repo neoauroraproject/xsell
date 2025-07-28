@@ -6,7 +6,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || (
 
 class ApiClient {
   private baseURL: string;
-  private mockMode = true; // Enable mock mode for standalone frontend
+  private mockMode = false; // Disable mock mode to use real backend
 
   constructor(baseURL: string) {
     this.baseURL = baseURL;
@@ -251,10 +251,14 @@ class ApiClient {
         body: JSON.stringify({ username, password }),
       });
       
+      console.log('📡 Raw login response:', response);
+      
       // Store token if login successful
       if (response.success && response.data && response.data.token) {
         console.log('💾 Storing auth token');
         localStorage.setItem('auth_token', response.data.token);
+      } else {
+        console.log('❌ No token in response:', response);
       }
       
       return response;

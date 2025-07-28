@@ -31,16 +31,24 @@ export const Login: React.FC = () => {
     
     // Validate inputs
     if (!username.trim() || !password.trim()) {
+      console.log('❌ Empty username or password');
       return;
     }
 
+    console.log('🚀 Starting login process...');
     setLoading(true);
 
     try {
+      console.log('📞 Calling login function...');
       const success = await login(username.trim(), password);
       
+      console.log('📊 Login result:', success);
+      
       if (success) {
+        console.log('✅ Login successful, navigating to dashboard');
         navigate('/');
+      } else {
+        console.log('❌ Login failed');
       }
       // Error handling is done in the auth hook
     } catch (err: any) {
