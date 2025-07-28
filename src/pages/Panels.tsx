@@ -19,6 +19,7 @@ export const Panels: React.FC = () => {
     name: '',
     url: '',
     subUrl: '',
+    panel_type: '3x-ui',
     username: '',
     password: '',
     enableVpsAccess: false,
@@ -36,7 +37,7 @@ export const Panels: React.FC = () => {
     setConnectionResult(null);
 
     try {
-      const result = await testConnection(newPanel.url, newPanel.username, newPanel.password);
+      const result = await testConnection(newPanel.url, newPanel.username, newPanel.password, newPanel.panel_type);
       setConnectionResult(result);
     } catch (error) {
       setConnectionResult({
@@ -60,6 +61,7 @@ export const Panels: React.FC = () => {
         name: newPanel.name,
         url: newPanel.url,
         subUrl: newPanel.subUrl || null,
+        panel_type: newPanel.panel_type,
         username: newPanel.username,
         password: newPanel.password,
         vpsUsername: newPanel.enableVpsAccess ? newPanel.vpsUsername : null,
@@ -94,6 +96,17 @@ export const Panels: React.FC = () => {
 
   const handleEditPanel = (panel: any) => {
     setSelectedPanel(panel);
+    setNewPanel({
+      name: panel.name,
+      url: panel.url,
+      subUrl: panel.subUrl || '',
+      panel_type: panel.panel_type || '3x-ui',
+      username: panel.username,
+      password: panel.password,
+      enableVpsAccess: !!(panel.vpsUsername && panel.vpsPassword),
+      vpsUsername: panel.vpsUsername || '',
+      vpsPassword: panel.vpsPassword || ''
+    });
     setShowEditModal(true);
   };
 
@@ -247,6 +260,21 @@ export const Panels: React.FC = () => {
       {/* Add Panel Modal */}
       <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add New X-UI Panel" size="lg">
         <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Panel Type *
+            </label>
+            <select
+              value={newPanel.panel_type}
+              onChange={(e) => setNewPanel({...newPanel, panel_type: e.target.value})}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              required
+            >
+              <option value="3x-ui">3X-UI Panel</option>
+              <option value="marzban">Marzban Panel</option>
+            </select>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -257,7 +285,7 @@ export const Panels: React.FC = () => {
                 value={newPanel.name}
                 onChange={(e) => setNewPanel({...newPanel, name: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                placeholder="Server-01"
+                placeholder={newPanel.panel_type === 'marzban' ? 'Marzban-Server-01' : 'Server-01'}
                 required
               />
             </div>
@@ -271,7 +299,7 @@ export const Panels: React.FC = () => {
                 value={newPanel.url}
                 onChange={(e) => setNewPanel({...newPanel, url: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                placeholder="http://85.237.211.232:2053/UHAxUEujzMD8UUL/"
+                placeholder={newPanel.panel_type === 'marzban' ? 'https://your-domain.com:8000' : 'http://85.237.211.232:2053/UHAxUEujzMD8UUL/'}
                 required
               />
             </div>

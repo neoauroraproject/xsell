@@ -1,15 +1,15 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
-import { xuiService } from '../services/xuiService.js';
+import { panelService } from '../services/panelService.js';
 
 const router = express.Router();
 
 // Test X-UI connection
 router.post('/test-connection', authenticateToken, async (req, res) => {
   try {
-    const { url, username, password } = req.body;
+    const { url, username, password, panel_type } = req.body;
 
-    console.log('Testing X-UI connection:', { url, username, hasPassword: !!password });
+    console.log('Testing panel connection:', { url, username, hasPassword: !!password, panel_type });
 
     if (!url || !username || !password) {
       return res.status(400).json({
@@ -18,7 +18,7 @@ router.post('/test-connection', authenticateToken, async (req, res) => {
       });
     }
 
-    const result = await xuiService.testConnection(url, username, password);
+    const result = await panelService.testConnection(url, username, password, panel_type);
 
     console.log('Connection test result:', result);
 
@@ -28,7 +28,7 @@ router.post('/test-connection', authenticateToken, async (req, res) => {
       data: result.data || null
     });
   } catch (error) {
-    console.error('X-UI connection test error:', error);
+    console.error('Panel connection test error:', error);
     res.status(500).json({
       success: false,
       message: 'Connection test failed',
@@ -37,20 +37,20 @@ router.post('/test-connection', authenticateToken, async (req, res) => {
   }
 });
 
-// Get X-UI system stats
+// Get panel system stats
 router.get('/stats/:panelId', authenticateToken, async (req, res) => {
   try {
     const { panelId } = req.params;
     console.log('Getting stats for panel:', panelId);
     
-    const stats = await xuiService.getSystemStats(panelId);
+    const stats = await panelService.getSystemStats(panelId);
 
     res.json({
       success: true,
       data: stats
     });
   } catch (error) {
-    console.error('Get X-UI stats error:', error);
+    console.error('Get panel stats error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get system stats',
@@ -59,20 +59,20 @@ router.get('/stats/:panelId', authenticateToken, async (req, res) => {
   }
 });
 
-// Get X-UI inbounds
+// Get panel inbounds
 router.get('/inbounds/:panelId', authenticateToken, async (req, res) => {
   try {
     const { panelId } = req.params;
     console.log('Getting inbounds for panel:', panelId);
     
-    const inbounds = await xuiService.getInbounds(panelId);
+    const inbounds = await panelService.getInbounds(panelId);
 
     res.json({
       success: true,
       data: inbounds
     });
   } catch (error) {
-    console.error('Get X-UI inbounds error:', error);
+    console.error('Get panel inbounds error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get inbounds',

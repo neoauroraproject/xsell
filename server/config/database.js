@@ -40,6 +40,7 @@ export async function initDatabase() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         url TEXT NOT NULL,
+        panel_type TEXT DEFAULT '3x-ui',
         username TEXT NOT NULL,
         password TEXT NOT NULL,
         status TEXT DEFAULT 'inactive',
@@ -54,12 +55,16 @@ export async function initDatabase() {
     const tableInfo = await db.allAsync('PRAGMA table_info(panels)');
     const hasVpsUsername = tableInfo.some(column => column.name === 'vpsUsername');
     const hasVpsPassword = tableInfo.some(column => column.name === 'vpsPassword');
+    const hasPanelType = tableInfo.some(column => column.name === 'panel_type');
     
     if (!hasVpsUsername) {
       await db.runAsync('ALTER TABLE panels ADD COLUMN vpsUsername TEXT');
     }
     if (!hasVpsPassword) {
       await db.runAsync('ALTER TABLE panels ADD COLUMN vpsPassword TEXT');
+    }
+    if (!hasPanelType) {
+      await db.runAsync('ALTER TABLE panels ADD COLUMN panel_type TEXT DEFAULT "3x-ui"');
     }
 
     // Create users table
@@ -110,6 +115,20 @@ export async function initDatabase() {
       console.log('✅ Default admin created: username=admin, password=admin123');
     } else {
       console.log('✅ Default admin already exists');
+    }
+
+    // Check for environment variables and create custom admin if specified
+    if (process.env.ADMIN_USERNAME && process.env.ADMIN_PASSWORD) {
+      const customAdminExists = await db.getAsync('SELECT id FROM admins WHERE username = ?', [process.env.ADMIN_USERNAME]);
+      if (!customAdminExists && process.env.ADMIN_USERNAME !== 'admin') {
+        const bcrypt = await import('bcryptjs');
+        const hashedPassword = await bcrypt.default.hash(process.env.ADMIN_PASSWORD, 10);
+        await db.runAsync(
+          'INSERT INTO admins (username, email, password, role) VALUES (?, ?, ?, ?)',
+          [process.env.ADMIN_USERNAME, `${process.env.ADMIN_USERNAME}@xsell.com`, hashedPassword, 'super_admin']
+        );
+        console.log(`✅ Custom admin created: username=${process.env.ADMIN_USERNAME}`);
+      }
     }
 
     // Insert default settings

@@ -51,9 +51,9 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Create new panel
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { name, url, subUrl, username, password, vpsUsername, vpsPassword } = req.body;
+    const { name, url, subUrl, username, password, vpsUsername, vpsPassword, panel_type } = req.body;
 
-    console.log('Creating panel with data:', { name, url, username, hasPassword: !!password });
+    console.log('Creating panel with data:', { name, url, username, hasPassword: !!password, panel_type });
 
     if (!name || !url || !username || !password) {
       return res.status(400).json({
@@ -77,9 +77,9 @@ router.post('/', authenticateToken, async (req, res) => {
 
     // Insert panel with all fields
     const result = await db.runAsync(
-      `INSERT INTO panels (name, url, username, password, status, vpsUsername, vpsPassword) 
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [name, url, username, password, 'active', vpsUsername || null, vpsPassword || null]
+      `INSERT INTO panels (name, url, username, password, status, vpsUsername, vpsPassword, panel_type) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [name, url, username, password, 'active', vpsUsername || null, vpsPassword || null, panel_type || '3x-ui']
     );
 
     if (!result || !result.lastID) {
@@ -112,7 +112,7 @@ router.post('/', authenticateToken, async (req, res) => {
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, url, subUrl, username, password, status, vpsUsername, vpsPassword } = req.body;
+    const { name, url, subUrl, username, password, status, vpsUsername, vpsPassword, panel_type } = req.body;
 
     const panel = await db.getAsync('SELECT * FROM panels WHERE id = ?', [id]);
     if (!panel) {
@@ -124,7 +124,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 
     await db.runAsync(
       `UPDATE panels SET name = ?, url = ?, username = ?, password = ?, status = ?, 
-       vpsUsername = ?, vpsPassword = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+       vpsUsername = ?, vpsPassword = ?, panel_type = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
       [
         name || panel.name, 
         url || panel.url, 
@@ -133,6 +133,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
         status || panel.status,
         vpsUsername !== undefined ? vpsUsername : panel.vpsUsername,
         vpsPassword !== undefined ? vpsPassword : panel.vpsPassword,
+        panel_type || panel.panel_type || '3x-ui',
         id
       ]
     );
