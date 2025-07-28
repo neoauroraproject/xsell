@@ -316,10 +316,10 @@ class ApiClient {
   }
 
   // X-UI endpoints
-  async testXUIConnection(url: string, username: string, password: string) {
+  async testXUIConnection(url: string, username: string, password: string, panel_type?: string) {
     return this.request('/xui/test-connection', {
       method: 'POST',
-      body: JSON.stringify({ url, username, password }),
+      body: JSON.stringify({ url, username, password, panel_type }),
     });
   }
 

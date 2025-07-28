@@ -384,9 +384,9 @@ export const usePanels = () => {
     }
   };
 
-  const testConnection = async (url: string, username: string, password: string) => {
+  const testConnection = async (url: string, username: string, password: string, panel_type?: string) => {
     try {
-      const response = await apiClient.testXUIConnection(url, username, password);
+      const response = await apiClient.testXUIConnection(url, username, password, panel_type);
       return response;
     } catch (error) {
       console.error('Failed to test connection:', error);
