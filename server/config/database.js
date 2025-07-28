@@ -95,6 +95,27 @@ export async function initDatabase() {
       )
     `);
 
+    // Create panel_admins table for managing admins on panels
+    await db.runAsync(`
+      CREATE TABLE IF NOT EXISTS panel_admins (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        panel_id INTEGER NOT NULL,
+        username TEXT NOT NULL,
+        password TEXT NOT NULL,
+        traffic_limit_gb INTEGER DEFAULT 0,
+        time_limit_days INTEGER DEFAULT 0,
+        user_limit INTEGER DEFAULT 0,
+        traffic_used_gb INTEGER DEFAULT 0,
+        time_used_days INTEGER DEFAULT 0,
+        users_created INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'active',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (panel_id) REFERENCES panels (id) ON DELETE CASCADE,
+        UNIQUE(panel_id, username)
+      )
+    `);
+
     // Check if description column exists, if not add it
     const settingsTableInfo = await db.allAsync('PRAGMA table_info(settings)');
     const hasDescriptionColumn = settingsTableInfo.some(column => column.name === 'description');

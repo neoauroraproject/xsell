@@ -11,10 +11,12 @@ export const Panels: React.FC = () => {
   const { panels, loading, addPanel, updatePanel, deletePanel, testConnection } = usePanels();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAdminModal, setShowAdminModal] = useState(false);
   const [selectedPanel, setSelectedPanel] = useState<any>(null);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionResult, setConnectionResult] = useState<any>(null);
   const [addingPanel, setAddingPanel] = useState(false);
+  const [creatingAdmin, setCreatingAdmin] = useState(false);
   const [newPanel, setNewPanel] = useState({
     name: '',
     url: '',
@@ -25,6 +27,14 @@ export const Panels: React.FC = () => {
     enableVpsAccess: false,
     vpsUsername: '',
     vpsPassword: ''
+  });
+  const [newAdmin, setNewAdmin] = useState({
+    username: '',
+    password: '',
+    traffic_limit_gb: '',
+    time_limit_days: '',
+    user_limit: '',
+    telegram_id: ''
   });
 
   const handleTestConnection = async () => {
@@ -120,6 +130,47 @@ export const Panels: React.FC = () => {
         alert('Failed to delete panel. Please try again.');
       }
     }
+  };
+
+  const handleCreateAdmin = async () => {
+    if (!selectedPanel) return;
+
+    setCreatingAdmin(true);
+    try {
+      const adminData = {
+        username: newAdmin.username,
+        password: newAdmin.password,
+        traffic_limit_gb: parseInt(newAdmin.traffic_limit_gb) || 0,
+        time_limit_days: parseInt(newAdmin.time_limit_days) || 0,
+        user_limit: parseInt(newAdmin.user_limit) || 0,
+        telegram_id: newAdmin.telegram_id || null
+      };
+
+      const response = await apiClient.createPanelAdmin(selectedPanel.id, adminData);
+      
+      if (response.success) {
+        alert('Panel admin created successfully!');
+        setShowAdminModal(false);
+        setNewAdmin({
+          username: '',
+          password: '',
+          traffic_limit_gb: '',
+          time_limit_days: '',
+          user_limit: '',
+          telegram_id: ''
+        });
+      }
+    } catch (error: any) {
+      console.error('Failed to create panel admin:', error);
+      alert(`Failed to create admin: ${error.message || 'Unknown error'}`);
+    } finally {
+      setCreatingAdmin(false);
+    }
+  };
+
+  const handleShowCreateAdmin = (panel: any) => {
+    setSelectedPanel(panel);
+    setShowAdminModal(true);
   };
 
   if (loading) {
@@ -237,11 +288,19 @@ export const Panels: React.FC = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleEditPanel(panel)}
+                  onClick={() => handleShowCreateAdmin(panel)}
                   className="flex-1"
                 >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Admin
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleEditPanel(panel)}
+                  className="px-3"
+                >
                   <Edit className="h-4 w-4 mr-1" />
-                  Edit
                 </Button>
                 <Button
                   variant="danger"
@@ -471,6 +530,130 @@ export const Panels: React.FC = () => {
                 </div>
               ) : (
                 'Add Panel'
+              )}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Create Panel Admin Modal */}
+      <Modal isOpen={showAdminModal} onClose={() => setShowAdminModal(false)} title="Create Panel Admin" size="lg">
+        <div className="space-y-6">
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+              Panel: {selectedPanel?.name}
+            </h4>
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              Create a new admin on this {selectedPanel?.panel_type || '3x-ui'} panel with usage limits
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Admin Username *
+              </label>
+              <input
+                type="text"
+                value={newAdmin.username}
+                onChange={(e) => setNewAdmin({...newAdmin, username: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                placeholder="Enter admin username"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Admin Password *
+              </label>
+              <input
+                type="password"
+                value={newAdmin.password}
+                onChange={(e) => setNewAdmin({...newAdmin, password: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                placeholder="Enter admin password"
+                required
+              />
+            </div>
+          <div className="border-t pt-4">
+            <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Usage Limits</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Traffic Limit (GB)
+                </label>
+                <input
+                  type="number"
+                  value={newAdmin.traffic_limit_gb}
+                  onChange={(e) => setNewAdmin({...newAdmin, traffic_limit_gb: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  placeholder="0 = unlimited"
+                  min="0"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Time Limit (Days)
+                </label>
+                <input
+                  type="number"
+                  value={newAdmin.time_limit_days}
+                  onChange={(e) => setNewAdmin({...newAdmin, time_limit_days: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  placeholder="0 = unlimited"
+                  min="0"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  User Limit
+                </label>
+                <input
+                  type="number"
+                  value={newAdmin.user_limit}
+                  onChange={(e) => setNewAdmin({...newAdmin, user_limit: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  placeholder="0 = unlimited"
+                  min="0"
+                />
+              </div>
+            </div>
+          </div>
+          </div>
+          {selectedPanel?.panel_type === 'marzban' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Telegram ID (Optional)
+              </label>
+              <input
+                type="text"
+                value={newAdmin.telegram_id}
+                onChange={(e) => setNewAdmin({...newAdmin, telegram_id: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                placeholder="Enter Telegram ID for notifications"
+              />
+            </div>
+          )}
+          
+          <div className="flex space-x-3 pt-4">
+            <Button variant="outline" onClick={() => setShowAdminModal(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCreateAdmin} 
+              disabled={!newAdmin.username || !newAdmin.password || creatingAdmin}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {creatingAdmin ? (
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Creating Admin...</span>
+                </div>
+              ) : (
+                'Create Admin'
               )}
             </Button>
           </div>

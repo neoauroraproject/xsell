@@ -425,6 +425,45 @@ class ApiClient {
       method: 'DELETE',
     });
   }
+
+  // Panel Admin endpoints
+  async createPanelAdmin(panelId: string, adminData: any) {
+    return this.request(`/panels/${panelId}/admins`, {
+      method: 'POST',
+      body: JSON.stringify(adminData),
+    });
+  }
+
+  async getPanelAdmins(panelId: string) {
+    return this.request(`/panels/${panelId}/admins`);
+  }
+
+  async updatePanelAdmin(panelId: string, adminId: string, adminData: any) {
+    return this.request(`/panels/${panelId}/admins/${adminId}`, {
+      method: 'PUT',
+      body: JSON.stringify(adminData),
+    });
+  }
+
+  async deletePanelAdmin(panelId: string, adminId: string) {
+    return this.request(`/panels/${panelId}/admins/${adminId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async addTrafficToPanelAdmin(panelId: string, adminId: string, amountGb: number) {
+    return this.request(`/panels/${panelId}/admins/${adminId}/add-traffic`, {
+      method: 'POST',
+      body: JSON.stringify({ amount_gb: amountGb }),
+    });
+  }
+
+  async addTimeToPanelAdmin(panelId: string, adminId: string, days: number) {
+    return this.request(`/panels/${panelId}/admins/${adminId}/add-time`, {
+      method: 'POST',
+      body: JSON.stringify({ days }),
+    });
+  }
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);

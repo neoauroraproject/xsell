@@ -77,6 +77,21 @@ class PanelService {
       return await service.resetClientTraffic(panelId, userId);
     }
   }
+
+  async createPanelAdmin(panelId, adminData) {
+    const service = await this.getServiceForPanel(panelId);
+    return await service.createAdmin(panelId, adminData);
+  }
+
+  async updatePanelAdmin(panelId, username, adminData) {
+    const service = await this.getServiceForPanel(panelId);
+    return await service.updateAdmin(panelId, username, adminData);
+  }
+
+  async deletePanelAdmin(panelId, username) {
+    const service = await this.getServiceForPanel(panelId);
+    return await service.deleteAdmin(panelId, username);
+  }
 }
 
 export const panelService = new PanelService();

@@ -227,7 +227,9 @@ class MarzbanService {
       const marzbanAdminData = {
         username: adminData.username,
         password: adminData.password,
-        is_sudo: adminData.is_sudo || false
+        is_sudo: false, // Always create regular admin, not sudo
+        telegram_id: adminData.telegram_id || null,
+        discord_webhook: adminData.discord_webhook || null
       };
 
       const response = await this.makeRequest(panelId, '/api/admin', 'POST', marzbanAdminData);
