@@ -151,8 +151,9 @@ export const useClients = () => {
     try {
       const response = await apiClient.getUsers();
       if (response.success) {
+        const usersData = response.data || [];
         // Transform database users to client format
-        const transformedClients = response.data.map((user: any) => ({
+        const transformedClients = usersData.map((user: any) => ({
           id: user.id.toString(),
           uuid: user.id.toString(),
           username: user.username,
@@ -171,6 +172,9 @@ export const useClients = () => {
           notes: undefined
         }));
         setClients(transformedClients);
+      } else {
+        console.error('Failed to fetch users:', response);
+        setClients([]);
       }
     } catch (error) {
       console.error('Failed to fetch clients:', error);
@@ -244,7 +248,11 @@ export const useAdmins = () => {
     try {
       const response = await apiClient.getAdmins();
       if (response.success) {
-        setAdmins(response.data || []);
+        const adminsData = response.data || [];
+        setAdmins(adminsData);
+      } else {
+        console.error('Failed to fetch admins:', response);
+        setAdmins([]);
       }
     } catch (error) {
       console.error('Failed to fetch admins:', error);
@@ -302,7 +310,8 @@ export const usePanels = () => {
     try {
       const response = await apiClient.getPanels();
       if (response.success) {
-        const transformedPanels = await Promise.all(response.data.map(async (panel: any) => {
+        const panelsData = response.data || [];
+        const transformedPanels = await Promise.all(panelsData.map(async (panel: any) => {
           let realStats = {
             cpuUsage: Math.random() * 100,
             ramUsage: Math.random() * 100,
@@ -335,6 +344,9 @@ export const usePanels = () => {
           };
         }));
         setPanels(transformedPanels);
+      } else {
+        console.error('Failed to fetch panels:', response);
+        setPanels([]);
       }
     } catch (error) {
       console.error('Failed to fetch panels:', error);

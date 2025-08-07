@@ -13,6 +13,18 @@ export const Panels: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [selectedPanel, setSelectedPanel] = useState<any>(null);
+  const [editPanel, setEditPanel] = useState({
+    name: '',
+    url: '',
+    subUrl: '',
+    panel_type: '3x-ui',
+    username: '',
+    password: '',
+    enableVpsAccess: false,
+    vpsUsername: '',
+    vpsPassword: ''
+  });
+  const [updatingPanel, setUpdatingPanel] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionResult, setConnectionResult] = useState<any>(null);
   const [addingPanel, setAddingPanel] = useState(false);
@@ -87,6 +99,7 @@ export const Panels: React.FC = () => {
         name: '',
         url: '',
         subUrl: '',
+        panel_type: '3x-ui',
         username: '',
         password: '',
         enableVpsAccess: false,
@@ -106,13 +119,13 @@ export const Panels: React.FC = () => {
 
   const handleEditPanel = (panel: any) => {
     setSelectedPanel(panel);
-    setNewPanel({
+    setEditPanel({
       name: panel.name,
       url: panel.url,
       subUrl: panel.subUrl || '',
       panel_type: panel.panel_type || '3x-ui',
       username: panel.username,
-      password: panel.password,
+      password: panel.password || '',
       enableVpsAccess: !!(panel.vpsUsername && panel.vpsPassword),
       vpsUsername: panel.vpsUsername || '',
       vpsPassword: panel.vpsPassword || ''
@@ -536,6 +549,170 @@ export const Panels: React.FC = () => {
         </div>
       </Modal>
 
+      {/* Edit Panel Modal */}
+      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Edit X-UI Panel" size="lg">
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Panel Type *
+            </label>
+            <select
+              value={editPanel.panel_type}
+              onChange={(e) => setEditPanel({...editPanel, panel_type: e.target.value})}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              required
+            >
+              <option value="3x-ui">3X-UI Panel</option>
+              <option value="marzban">Marzban Panel</option>
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Panel Name *
+              </label>
+              <input
+                type="text"
+                value={editPanel.name}
+                onChange={(e) => setEditPanel({...editPanel, name: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                placeholder={editPanel.panel_type === 'marzban' ? 'Marzban-Server-01' : 'Server-01'}
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Panel URL *
+              </label>
+              <input
+                type="url"
+                value={editPanel.url}
+                onChange={(e) => setEditPanel({...editPanel, url: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                placeholder={editPanel.panel_type === 'marzban' ? 'https://your-domain.com:8000' : 'http://85.237.211.232:2053/UHAxUEujzMD8UUL/'}
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Subscription Page URL (Optional)
+            </label>
+            <input
+              type="url"
+              value={editPanel.subUrl}
+              onChange={(e) => setEditPanel({...editPanel, subUrl: e.target.value})}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              placeholder="http://85.237.211.232:2053/sub"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Panel Username *
+              </label>
+              <input
+                type="text"
+                value={editPanel.username}
+                onChange={(e) => setEditPanel({...editPanel, username: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                placeholder="hmray"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Panel Password *
+              </label>
+              <input
+                type="password"
+                value={editPanel.password}
+                onChange={(e) => setEditPanel({...editPanel, password: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="border-t pt-4">
+            <div className="flex items-center mb-4">
+              <input
+                type="checkbox"
+                id="editEnableVpsAccess"
+                checked={editPanel.enableVpsAccess}
+                onChange={(e) => setEditPanel({...editPanel, enableVpsAccess: e.target.checked})}
+                className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+              />
+              <label htmlFor="editEnableVpsAccess" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                Enable VPS Access for Advanced Features
+              </label>
+            </div>
+
+            {editPanel.enableVpsAccess && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    VPS Username
+                  </label>
+                  <input
+                    type="text"
+                    value={editPanel.vpsUsername}
+                    onChange={(e) => setEditPanel({...editPanel, vpsUsername: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                    placeholder="root"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    VPS Password
+                  </label>
+                  <input
+                    type="password"
+                    value={editPanel.vpsPassword}
+                    onChange={(e) => setEditPanel({...editPanel, vpsPassword: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex space-x-3 pt-4">
+            <Button variant="outline" onClick={() => setShowEditModal(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpdatePanel} 
+              disabled={
+                !editPanel.name || 
+                !editPanel.url || 
+                !editPanel.username || 
+                !editPanel.password ||
+                updatingPanel
+              }
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {updatingPanel ? (
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Updating Panel...</span>
+                </div>
+              ) : (
+                'Update Panel'
+              )}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Create Panel Admin Modal */}
       <Modal isOpen={showAdminModal} onClose={() => setShowAdminModal(false)} title="Create Panel Admin" size="lg">
         <div className="space-y-6">
@@ -576,6 +753,8 @@ export const Panels: React.FC = () => {
                 required
               />
             </div>
+          </div>
+          
           <div className="border-t pt-4">
             <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Usage Limits</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -622,7 +801,7 @@ export const Panels: React.FC = () => {
               </div>
             </div>
           </div>
-          </div>
+          
           {selectedPanel?.panel_type === 'marzban' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

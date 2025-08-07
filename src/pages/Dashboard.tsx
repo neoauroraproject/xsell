@@ -31,7 +31,7 @@ export const Dashboard: React.FC = () => {
   const { admins, loading: adminsLoading } = useAdmins();
   const { panels, loading: panelsLoading } = usePanels();
   const { isSuperAdmin, admin } = useAuth();
-  const [showTrafficLogModal, setShowTrafficLogModal] = React.useState(false);
+  const [showTrafficLogModal, setShowTrafficLogModal] = useState(false);
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';

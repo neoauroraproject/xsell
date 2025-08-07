@@ -103,12 +103,14 @@ class ApiClient {
       if (body.username === 'admin' && body.password === 'admin123') {
         return {
           success: true,
-          token: 'mock-jwt-token',
-          user: {
-            id: 1,
-            username: 'admin',
-            role: 'super_admin',
-            email: 'admin@xsell.com'
+          data: {
+            token: 'mock-jwt-token',
+            user: {
+              id: 1,
+              username: 'admin',
+              role: 'super_admin',
+              email: 'admin@xsell.com'
+            }
           }
         };
       } else {
@@ -120,11 +122,13 @@ class ApiClient {
     if (endpoint === '/auth/me' && method === 'GET') {
       return {
         success: true,
-        user: {
-          id: 1,
-          username: 'admin',
-          role: 'super_admin',
-          email: 'admin@xsell.com'
+        data: {
+          user: {
+            id: 1,
+            username: 'admin',
+            role: 'super_admin',
+            email: 'admin@xsell.com'
+          }
         }
       };
     }
@@ -133,14 +137,15 @@ class ApiClient {
     if (endpoint === '/panels' && method === 'GET') {
       return {
         success: true,
-        panels: [
+        data: [
           {
             id: 1,
             name: 'Demo Panel 1',
             url: 'https://panel1.example.com',
             username: 'admin',
             status: 'active',
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            panel_type: '3x-ui'
           },
           {
             id: 2,
@@ -148,7 +153,8 @@ class ApiClient {
             url: 'https://panel2.example.com',
             username: 'admin',
             status: 'inactive',
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
+            panel_type: 'marzban'
           }
         ]
       };
@@ -158,7 +164,7 @@ class ApiClient {
     if (endpoint === '/users' && method === 'GET') {
       return {
         success: true,
-        users: [
+        data: [
           {
             id: 1,
             username: 'user1',
@@ -187,7 +193,7 @@ class ApiClient {
     if (endpoint === '/admins' && method === 'GET') {
       return {
         success: true,
-        admins: [
+        data: [
           {
             id: 1,
             username: 'admin',
@@ -203,7 +209,7 @@ class ApiClient {
     if (endpoint === '/settings' && method === 'GET') {
       return {
         success: true,
-        settings: [
+        data: [
           { key: 'app_name', value: 'X-UI SELL Panel', description: 'Application name' },
           { key: 'app_version', value: '1.0.0', description: 'Application version' },
           { key: 'max_panels', value: '10', description: 'Maximum number of panels' },
@@ -216,7 +222,7 @@ class ApiClient {
     if (endpoint === '/panels/stats' && method === 'GET') {
       return {
         success: true,
-        stats: {
+        data: {
           totalPanels: 2,
           activePanels: 1,
           totalUsers: 25,
